@@ -1,17 +1,25 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = (e) => {
     e.preventDefault();
     // TODO: Implement actual authentication
-    // For now, just store username and navigate to chat
-    localStorage.setItem('username', username);
-    navigate('/chat');
+    // For now, just use the context login function
+    login(username);
+    
+    // Nếu là admin, chuyển hướng đến trang admin
+    if (username.toLowerCase() === 'admin') {
+      navigate('/admin');
+    } else {
+      navigate('/chat');
+    }
   };
 
   return (

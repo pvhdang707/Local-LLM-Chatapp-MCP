@@ -1,6 +1,13 @@
 # Frontend - Local LLM Chat Application
 
-Ứng dụng chat sử dụng React và Tailwind CSS, cho phép người dùng tương tác với mô hình ngôn ngữ địa phương.
+Ứng dụng chat sử dụng React và Tailwind CSS, cho phép người dùng tương tác với local LLM model.
+
+## Lưu ý:
+- Đây **CHỈ LÀ BẢN DRAFT**, mô tả các luồng hoạt động và giao diện.
+- Ứng dụng chưa có backend thực sự, các chức năng chỉ mô phỏng giao diện.
+- **Đăng nhập**: Có thể sử dụng username và password tùy ý.
+- **Quyền Admin**: Sử dụng username "admin" để truy cập trang quản trị.
+- Dữ liệu được lưu trữ tạm thời và sẽ bị mất khi refresh trang.
 
 ## Cấu trúc thư mục
 
@@ -16,14 +23,15 @@ frontend/
 │   ├── pages/             # Các trang chính
 │   │   ├── Login.jsx      # Trang đăng nhập
 │   │   ├── ChatPage.jsx   # Trang chat chính
+│   │   ├── AdminPage.jsx  # Trang quản trị (chỉ cho admin)
 │   │   └── FileManager.jsx # Trang quản lý file
 │   ├── contexts/          # React Context
+│   │   └── AuthContext.jsx # Quản lý xác thực và phân quyền
 │   ├── services/          # Các service API
 │   └── App.jsx           # Component gốc
 ```
 
-## Lưu ý:
-- Bản nháp, chỉ mô tả luồng hoạt động đơn giản.
+
 
 ## Chức năng chính
 
@@ -39,7 +47,14 @@ frontend/
 - Hiển thị trạng thái loading
 - Tự động cập nhật tiêu đề chat
 
-### 3. Quản lý File (`FileManager.jsx`)
+### 3. Trang quản trị (`AdminPage.jsx`) - *Chỉ hiển thị khi đăng nhập với username "admin"*
+- Hiển thị thống kê hệ thống
+- Quản lý người dùng (xem, tạo, xóa)
+- Quản lý file với icons trực quan theo loại file
+- Thông tin phòng ban của người dùng
+- Biểu đồ thống kê hoạt động
+
+### 4. Quản lý File (`FileManager.jsx`)
 - Hiển thị danh sách file
 - Sắp xếp theo tên, kích thước, loại, ngày sửa
 - Lọc file theo loại
@@ -47,7 +62,7 @@ frontend/
 - Xem thông tin chi tiết file
 - Xóa file
 
-### 4. Components chung
+### 5. Components chung
 - `Navbar`: Thanh điều hướng với menu và nút đăng xuất
 - `Sidebar`: Hiển thị danh sách các phiên chat
 - `ChatHistory`: Hiển thị lịch sử tin nhắn
@@ -76,3 +91,12 @@ npm start
 ```bash
 npm run build
 ```
+
+## Thông tin đăng nhập mẫu
+
+| Username | Password | Vai trò |
+|----------|----------|---------|
+| admin    | bất kỳ   | Admin (có quyền truy cập trang quản trị) |
+| user1    | bất kỳ   | Người dùng thường |
+
+*Lưu ý: Vì đây là bản demo, bạn có thể đăng nhập với bất kỳ username/password nào. Nhưng chỉ tài khoản với username là "admin" mới có quyền truy cập trang quản trị.*

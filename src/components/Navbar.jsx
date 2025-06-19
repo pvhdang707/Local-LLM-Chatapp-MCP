@@ -1,11 +1,13 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const Navbar = ({ username }) => {
   const navigate = useNavigate();
+  const { logout, isAdmin } = useAuth();
 
   const handleLogout = () => {
-    localStorage.removeItem('username');
+    logout();
     navigate('/login');
   };
 
@@ -17,6 +19,11 @@ const Navbar = ({ username }) => {
           <div className="flex space-x-4">
             <Link to="/chat" className="hover:text-gray-300">Chat</Link>
             <Link to="/files" className="hover:text-gray-300">Quản lý File</Link>
+            {isAdmin && (
+              <Link to="/admin" className="hover:text-gray-300 bg-blue-600 px-3 py-1 rounded">
+                Quản trị viên
+              </Link>
+            )}
           </div>
         </div>
         <div className="flex items-center space-x-4">
