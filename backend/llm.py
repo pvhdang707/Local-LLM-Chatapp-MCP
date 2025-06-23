@@ -32,14 +32,13 @@ llm = create_llm(model=OllamaConfig.RagModel)
 
 def load_file_document(ctx: RagDataContext) -> RagDataContext:
     urls = ctx.get('file_urls',[])
-    if len(urls) == 0:
-        return ctx
     documents = []
-    for url in urls:
-        try:
-            documents.extend(load_document_from_url(url))
-        except Exception as e:
-            print(f"Error loading file from {url}: {e}")
+    if len(urls) > 0:
+        for url in urls:
+            try:
+                documents.extend(load_document_from_url(url))
+            except Exception as e:
+                print(f"Error loading file from {url}: {e}")
     ctx["file_documents"] = documents
     ctx["steps"].append("load_file_documents")
     return ctx
@@ -53,7 +52,8 @@ def retrieve(ctx: RagDataContext) -> RagDataContext:
 
 def generate(ctx: RagDataContext) -> RagDataContext:
     docs_content = "\n".join(doc.page_content for doc in ctx["documents"])
-    file_content = "\n".join(doc.page_content for doc in ctx["file_documents"])
+    file_documents = ctx.get("file_documents", [])
+    file_content = "\n".join(doc.page_content for doc in file_documents) if file_documents else ""
 
     messages = [
         SystemMessage(content="You are an assistant for question-answering tasks."),
@@ -77,6 +77,8 @@ def store_answer(ctx: RagDataContext) -> RagDataContext:
     content = f"Q: {question}\nA: {answer}"
     metadata = {"source": "chat-history", "type": "Q&A"}
     vectordb.add_document(vectorstore, content, metadata)
+    ctx["steps"].append("store_answer")
+    return ctx
 
 # LangGraph setup
 def add_nodes(workflow: StateGraph):
