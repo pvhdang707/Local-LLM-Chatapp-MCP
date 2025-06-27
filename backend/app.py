@@ -4,6 +4,7 @@ import os
 from flask import Flask, request, jsonify
 from auth import auth_manager, require_auth, require_admin
 from file_manager import file_manager
+from chat_manager import chat_manager
 from flask_cors import CORS
 from datetime import datetime
 
@@ -84,6 +85,177 @@ def get_profile():
             'is_active': user.is_active
         })
 
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ==================== CHAT SESSION ENDPOINTS ====================
+
+@app.route('/chat/sessions', methods=['POST'])
+@require_auth
+def create_chat_session():
+    """Tạo chat session mới"""
+    try:
+        data = request.json
+        title = data.get('title', 'New Chat')
+        user_id = request.user['user_id']
+        username = request.user['username']
+        
+        result = chat_manager.create_chat_session(
+            user_id=user_id,
+            username=username,
+            title=title
+        )
+        
+        if result['success']:
+            return jsonify(result), 201
+        else:
+            return jsonify(result), 400
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/chat/sessions', methods=['GET'])
+@require_auth
+def get_chat_sessions():
+    """Lấy danh sách chat sessions của user"""
+    try:
+        user_id = request.user['user_id']
+        username = request.user['username']
+        
+        sessions = chat_manager.get_chat_sessions(user_id=user_id)
+        return jsonify({'sessions': sessions})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/chat/sessions/<session_id>', methods=['GET'])
+@require_auth
+def get_chat_messages(session_id):
+    """Lấy danh sách messages trong một session"""
+    try:
+        limit = request.args.get('limit', 50, type=int)
+        messages = chat_manager.get_chat_messages(session_id, limit)
+        return jsonify({'messages': messages})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/chat/sessions/<session_id>/send', methods=['POST'])
+@require_auth
+def send_message(session_id):
+    """Gửi message trong một session"""
+    try:
+        data = request.json
+        message = data.get('message', '').strip()
+        file_urls = data.get('file_urls', [])
+        
+        if not message:
+            return jsonify({'error': 'Message không được để trống'}), 400
+        
+        user_id = request.user['user_id']
+        username = request.user['username']
+        
+        result = chat_manager.send_message(
+            session_id=session_id,
+            message=message,
+            user_id=user_id,
+            username=username,
+            file_urls=file_urls
+        )
+        
+        if result['success']:
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/chat/sessions/<session_id>', methods=['DELETE'])
+@require_auth
+def delete_chat_session(session_id):
+    """Xóa chat session"""
+    try:
+        user_id = request.user['user_id']
+        result = chat_manager.delete_chat_session(session_id, user_id)
+        
+        if result['success']:
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/chat/sessions/<session_id>/title', methods=['PUT'])
+@require_auth
+def update_session_title(session_id):
+    """Cập nhật tiêu đề chat session"""
+    try:
+        data = request.json
+        title = data.get('title', '').strip()
+        
+        if not title:
+            return jsonify({'error': 'Title không được để trống'}), 400
+        
+        user_id = request.user['user_id']
+        result = chat_manager.update_session_title(session_id, title, user_id)
+        
+        if result['success']:
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ==================== PUBLIC CHAT ENDPOINTS ====================
+
+@app.route('/chat/public/sessions', methods=['POST'])
+def create_public_chat_session():
+    """Tạo public chat session (không cần auth)"""
+    try:
+        data = request.json
+        title = data.get('title', 'Public Chat')
+        username = data.get('username', 'anonymous')
+        
+        result = chat_manager.create_chat_session(
+            username=username,
+            title=title
+        )
+        
+        if result['success']:
+            return jsonify(result), 201
+        else:
+            return jsonify(result), 400
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/chat/public/sessions/<session_id>/send', methods=['POST'])
+def send_public_message(session_id):
+    """Gửi message trong public session"""
+    try:
+        data = request.json
+        message = data.get('message', '').strip()
+        username = data.get('username', 'anonymous')
+        file_urls = data.get('file_urls', [])
+        
+        if not message:
+            return jsonify({'error': 'Message không được để trống'}), 400
+        
+        result = chat_manager.send_message(
+            session_id=session_id,
+            message=message,
+            username=username,
+            file_urls=file_urls
+        )
+        
+        if result['success']:
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+            
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -250,7 +422,7 @@ def cleanup_files():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# ==================== USER FILE ENDPOINTS ====================
+# ==================== USER FILE MANAGEMENT ENDPOINTS ====================
 
 @app.route('/user/files', methods=['GET'])
 @require_auth
@@ -266,7 +438,7 @@ def get_user_files():
 @app.route('/user/files', methods=['POST'])
 @require_auth
 def user_upload_file():
-    """Upload file (user thường)"""
+    """Upload file (user)"""
     try:
         if 'file' not in request.files:
             return jsonify({'error': 'No file part'}), 400
@@ -286,120 +458,105 @@ def user_upload_file():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# ==================== SIMPLE CHAT ENDPOINT ====================
+# ==================== LEGACY CHAT ENDPOINTS (for backward compatibility) ====================
 
 @app.route('/chat', methods=['POST'])
 @require_auth
 def chat():
-    """Chat với AI Mistral (yêu cầu đăng nhập)"""
+    """Chat endpoint cũ (legacy)"""
     try:
         data = request.json
-        msg = data.get('msg', '').strip()
-        file_urls = data.get('urls', [])  # Optional file URLs
+        message = data.get('message', '').strip()
+        file_urls = data.get('file_urls', [])
 
-        if not msg:
+        if not message:
             return jsonify({'error': 'Message không được để trống'}), 400
 
-        # Tạo context cho LLM workflow
-        initial_state = {
-            "question": msg,
-            "steps": [],
-            "file_urls": file_urls,
-            "file_documents": [],
-            "documents": [],
-            "generation": ""
-        }
-        
-        # Chạy LLM workflow
+        # Tạo context cho chat
+        rag_context = RagDataContext(
+            question=message,
+            generation="",
+            documents=[],
+            steps=[],
+            file_urls=file_urls,
+            file_documents=[],
+            chat_context=""  # Không có context cho legacy chat
+        )
+
+        # Chạy workflow
         config = {"configurable": {"thread_id": str(uuid.uuid4())}}
-        state_dict = workflow.invoke(initial_state, config)
+        result = workflow.invoke(rag_context, config)
         
-        # Lấy kết quả từ AI
-        ai_answer = state_dict.get("generation", "Sorry, I couldn't generate a response.")
-        steps = state_dict.get("steps", [])
-        
+        response = result.get("generation", "Xin lỗi, tôi không thể trả lời câu hỏi này.")
+
         return jsonify({
-            "answer": ai_answer,
-            "steps": steps,
-            "user": request.user['username'],
-            "question": msg
+            'success': True,
+            'response': response,
+            'steps': result.get('steps', [])
         })
 
     except Exception as e:
-        print(traceback.format_exc())
+        print(f"Error in chat: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/chat/public', methods=['POST'])
 def chat_public():
-    """Chat public với AI Mistral (không cần đăng nhập) - để test"""
+    """Public chat endpoint cũ (legacy)"""
     try:
         data = request.json
-        msg = data.get('msg', '').strip()
-        file_urls = data.get('urls', [])  # Optional file URLs
+        message = data.get('message', '').strip()
+        file_urls = data.get('file_urls', [])
 
-        if not msg:
+        if not message:
             return jsonify({'error': 'Message không được để trống'}), 400
 
-        # Tạo context cho LLM workflow
-        initial_state = {
-            "question": msg,
-            "steps": [],
-            "file_urls": file_urls,
-            "file_documents": [],
-            "documents": [],
-            "generation": ""
-        }
-        
-        # Chạy LLM workflow
+        # Tạo context cho chat
+        rag_context = RagDataContext(
+            question=message,
+            generation="",
+            documents=[],
+            steps=[],
+            file_urls=file_urls,
+            file_documents=[],
+            chat_context=""  # Không có context cho legacy chat
+        )
+
+        # Chạy workflow
         config = {"configurable": {"thread_id": str(uuid.uuid4())}}
-        state_dict = workflow.invoke(initial_state, config)
+        result = workflow.invoke(rag_context, config)
         
-        # Lấy kết quả từ AI
-        ai_answer = state_dict.get("generation", "Sorry, I couldn't generate a response.")
-        steps = state_dict.get("steps", [])
-        
+        response = result.get("generation", "Xin lỗi, tôi không thể trả lời câu hỏi này.")
+
         return jsonify({
-            "answer": ai_answer,
-            "steps": steps,
-            "user": "public",
-            "question": msg,
-            "note": "This is a public endpoint for testing"
+            'success': True,
+            'response': response,
+            'steps': result.get('steps', [])
         })
 
     except Exception as e:
-        print(traceback.format_exc())
+        print(f"Error in public chat: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
 
-# ==================== HEALTH CHECK ====================
+# ==================== UTILITY ENDPOINTS ====================
 
 @app.route('/status', methods=['GET'])
 def server_status():
-    """Server status endpoint - không yêu cầu đăng nhập"""
+    """Kiểm tra trạng thái server"""
     return jsonify({
         'status': 'running',
-        'message': 'Server is running',
-        'auth_required': 'true',
-        'timestamp': datetime.now().isoformat()
+        'timestamp': datetime.now().isoformat(),
+        'version': '1.0.0'
     })
 
 @app.route('/health', methods=['GET'])
 @require_auth
 def health_check():
-    """Health check endpoint - yêu cầu đăng nhập"""
+    """Health check endpoint (cần auth)"""
     return jsonify({
         'status': 'healthy',
-        'message': 'Server is running',
-        'auth_system': 'enabled',
-        'user': request.user['username'],
-        'role': request.user['role']
+        'user': request.user,
+        'timestamp': datetime.now().isoformat()
     })
 
 if __name__ == '__main__':
-    host = os.getenv("SERVER__HOST", "0.0.0.0")
-    port = int(os.getenv("SERVER__PORT", 5000))
-    
-    print(f"🚀 Starting server on {host}:{port}")
-    print(f"📋 Default admin account: admin / admin123")
-    print(f"🔗 Health check: http://{host}:{port}/health")
-    
-    app.run(host=host, port=port, debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)

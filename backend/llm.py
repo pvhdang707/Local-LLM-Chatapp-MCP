@@ -8,7 +8,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 import vectordb
 from config import OllamaConfig
-from file_loader import load_document_from_url
+from file_utils.file_loader import load_document_from_url
 
 
 class RagDataContext(TypedDict):
@@ -18,6 +18,7 @@ class RagDataContext(TypedDict):
     steps: List[str]
     file_urls: List[str]
     file_documents: List[Document]
+    chat_context: str
 
 def create_llm(model="mistral", temperature=0, format=''):
     return ChatOllama(
@@ -54,9 +55,15 @@ def generate(ctx: RagDataContext) -> RagDataContext:
     docs_content = "\n".join(doc.page_content for doc in ctx["documents"])
     file_documents = ctx.get("file_documents", [])
     file_content = "\n".join(doc.page_content for doc in file_documents) if file_documents else ""
+    
+    chat_context = ctx.get("chat_context", "")
+
+    system_content = "You are an assistant for question-answering tasks."
+    if chat_context:
+        system_content += f"\n\nPrevious conversation context:\n{chat_context}\n\nPlease consider this context when answering the current question."
 
     messages = [
-        SystemMessage(content="You are an assistant for question-answering tasks."),
+        SystemMessage(content=system_content),
         HumanMessage(
             content=f"""Use the following documents to answer the question concisely (max 3 sentences). 
                 Question: {ctx['question']} 
