@@ -1,4 +1,0 @@
-- cd backend
-- ollama pull mistral
-- pip install requirements.txt
-- python app.py
