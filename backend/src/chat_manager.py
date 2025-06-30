@@ -4,6 +4,7 @@ from datetime import datetime
 from src.database import get_db, ChatSession as DBChatSession, ChatMessage as DBChatMessage
 from src.llm import workflow, RagDataContext
 import src.vectordb as vectordb
+import logging
 
 class ChatManager:
     def __init__(self):
@@ -142,18 +143,22 @@ class ChatManager:
             documents = result.get("documents", [])
             file_documents = result.get("file_documents", [])
             
-            # Tạo danh sách file sources
+            # Lọc file_sources chỉ lấy file thực sự liên quan đến prompt
+            keyword = message.lower()
             file_sources = []
             for doc in documents + file_documents:
+                logging.info(f"[DEBUG] doc.metadata: {getattr(doc, 'metadata', None)}")
+                logging.info(f"[DEBUG] doc.page_content: {getattr(doc, 'page_content', None)}")
                 if hasattr(doc, 'metadata') and doc.metadata:
-                    # Ưu tiên lấy file_name, nếu không có thì lấy source
                     file_name = doc.metadata.get('file_name', '')
-                    source = doc.metadata.get('source', '')
-                    
-                    if file_name and file_name not in file_sources:
-                        file_sources.append(file_name)
-                    elif source and source not in file_sources and source != "chat-history":
-                        file_sources.append(source)
+                    file_id = doc.metadata.get('file_id', '')
+                    content = getattr(doc, 'page_content', '').lower()
+                    # Chỉ thêm file nếu có đủ file_name, file_id và nội dung/tên file chứa từ khóa
+                    if file_name and file_id and ((keyword in file_name.lower()) or (content and keyword in content)):
+                        file_sources.append({
+                            'filename': file_name,
+                            'download_url': f"/api/user/files/download/{file_id}"
+                        })
             
             # Lưu message và response vào database
             chat_message = DBChatMessage(
@@ -183,7 +188,7 @@ class ChatManager:
                 "message_id": chat_message.id,
                 "context_used": len(context_messages),
                 "documents_used": len(documents + file_documents),
-                "file_sources": file_sources  # Thêm danh sách file sources
+                "file_sources": file_sources  # Danh sách file sources kèm download_url
             }
             
         except Exception as e:

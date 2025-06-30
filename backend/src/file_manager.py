@@ -120,6 +120,7 @@ class FileManager:
                                 "file_type": file_info.file_type,
                                 "uploaded_by": file_info.uploaded_by
                             }
+                            doc.metadata = metadata
                             vectordb.add_document(vectordb.init_vector_store(), doc.page_content, metadata)
                         print(f"Added file {file_info.original_name} to FAISS database")
                 except Exception as e:

@@ -15,7 +15,7 @@ def get_user_files():
     """Lấy danh sách files của user hiện tại"""
     try:
         user_id = request.user['user_id']
-        files = file_manager.get_user_files(user_id)
+        files = file_manager.get_files_by_user(user_id)
         return jsonify({'files': files})
         
     except Exception as e:
@@ -50,7 +50,7 @@ def get_user_files_enhanced():
     """Lấy danh sách files với thông tin chi tiết và phân loại"""
     try:
         user_id = request.user['user_id']
-        files = file_manager.get_user_files(user_id)
+        files = file_manager.get_files_by_user(user_id)
         
         # Thêm thông tin phân loại cho từng file
         enhanced_files = []
@@ -72,6 +72,24 @@ def get_user_files_enhanced():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@file_bp.route('/user/files/download/<file_id>', methods=['GET'])
+@require_auth
+def download_file(file_id):
+    """Cho phép user tải file của mình về"""
+    try:
+        user_id = request.user['user_id']
+        file_info = file_manager.get_file_by_id(file_id)
+        if not file_info:
+            return jsonify({'error': 'File không tồn tại'}), 404
+        if file_info['user_id'] != user_id:
+            return jsonify({'error': 'Không có quyền tải file này'}), 403
+        file_path = file_manager.get_file_path(file_id)
+        if not file_path or not os.path.exists(file_path):
+            return jsonify({'error': 'File không tồn tại trên server'}), 404
+        return send_file(file_path, as_attachment=True)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # ==================== FILE CLASSIFICATION ====================
 
 @file_bp.route('/files/<file_id>/classify', methods=['POST'])
@@ -86,7 +104,7 @@ def classify_file(file_id):
         if not file_info:
             return jsonify({'error': 'File không tồn tại'}), 404
             
-        if file_info['user_id'] != user_id and request.user['role'] != 'admin':
+        if file_info['user_id'] != user_id:
             return jsonify({'error': 'Không có quyền truy cập file này'}), 403
         
         # Thực hiện phân loại
@@ -125,7 +143,7 @@ def classify_files_batch():
                 })
                 continue
                 
-            if file_info['user_id'] != user_id and request.user['role'] != 'admin':
+            if file_info['user_id'] != user_id:
                 results.append({
                     'file_id': file_id,
                     'success': False,
@@ -168,7 +186,7 @@ def get_file_metadata(file_id):
         if not file_info:
             return jsonify({'error': 'File không tồn tại'}), 404
             
-        if file_info['user_id'] != user_id and request.user['role'] != 'admin':
+        if file_info['user_id'] != user_id:
             return jsonify({'error': 'Không có quyền truy cập file này'}), 403
         
         metadata = cloud_integration.get_file_metadata(file_id)
@@ -202,7 +220,7 @@ def send_metadata_batch():
                 })
                 continue
                 
-            if file_info['user_id'] != user_id and request.user['role'] != 'admin':
+            if file_info['user_id'] != user_id:
                 results.append({
                     'file_id': file_id,
                     'success': False,

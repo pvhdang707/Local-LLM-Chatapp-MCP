@@ -26,11 +26,6 @@ def init_database():
         create_tables()
         print("✅ Các bảng đã được tạo thành công!")
         
-        # Tạo admin user mặc định
-        print("Đang tạo admin user mặc định...")
-        auth_manager = AuthManager()
-        print("✅ Admin user đã được tạo thành công!")
-        
         print("\n🎉 Database đã được khởi tạo thành công!")
         print("Thông tin đăng nhập mặc định:")
         print("Username: admin")

@@ -44,31 +44,6 @@ class User:
 class AuthManager:
     def __init__(self):
         self.secret_key = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-this")
-        self._create_default_admin()
-
-    def _create_default_admin(self):
-        """Tạo admin mặc định nếu chưa có"""
-        db = next(get_db())
-        try:
-            admin_exists = db.query(DBUser).filter(DBUser.role == "admin").first()
-            if not admin_exists:
-                hashed_password = self.hash_password("admin123")
-                admin_user = DBUser(
-                    id=str(uuid.uuid4()),
-                    username="admin",
-                    password=hashed_password,
-                    role="admin",
-                    created_at=datetime.utcnow(),
-                    is_active=True
-                )
-                db.add(admin_user)
-                db.commit()
-                print("Default admin user created successfully!")
-        except Exception as e:
-            print(f"Error creating default admin: {e}")
-            db.rollback()
-        finally:
-            db.close()
 
     def hash_password(self, password: str) -> str:
         """Hash password"""
@@ -78,34 +53,27 @@ class AuthManager:
         """Verify password"""
         return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
-    def register_user(self, username: str, password: str, role: str = "user") -> Dict:
+    def register_user(self, username: str, password: str) -> Dict:
         """Đăng ký user mới"""
         db = next(get_db())
         try:
-            # Kiểm tra username đã tồn tại
             existing_user = db.query(DBUser).filter(DBUser.username == username).first()
             if existing_user:
                 return {"success": False, "message": "Username đã tồn tại"}
-
-            # Hash password
             hashed_password = self.hash_password(password)
-            
-            # Tạo user mới
             new_user = DBUser(
                 id=str(uuid.uuid4()),
                 username=username,
                 password=hashed_password,
-                role=role,
+                role='user',
                 created_at=datetime.utcnow(),
                 is_active=True
             )
-            
             db.add(new_user)
             db.commit()
             db.refresh(new_user)
-
             return {
-                "success": True, 
+                "success": True,
                 "message": "Đăng ký thành công",
                 "user": {
                     "id": new_user.id,
@@ -113,7 +81,6 @@ class AuthManager:
                     "role": new_user.role
                 }
             }
-
         except Exception as e:
             db.rollback()
             return {"success": False, "message": f"Lỗi khi đăng ký: {str(e)}"}
@@ -283,23 +250,6 @@ def require_auth(f):
         
         # Thêm thông tin user vào request
         request.user = payload
-        return f(*args, **kwargs)
-    
-    return decorated_function
-
-def require_admin(f):
-    """Decorator yêu cầu quyền admin"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        # Đầu tiên kiểm tra authentication
-        auth_result = require_auth(lambda: None)()
-        if hasattr(auth_result, 'status_code') and auth_result.status_code == 401:
-            return auth_result
-        
-        # Sau đó kiểm tra quyền admin
-        if request.user.get('role') != 'admin':
-            return jsonify({'error': 'Không có quyền truy cập'}), 403
-        
         return f(*args, **kwargs)
     
     return decorated_function 

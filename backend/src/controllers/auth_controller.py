@@ -1,31 +1,24 @@
 from flask import Blueprint, request, jsonify
-from src.auth import auth_manager, require_auth, require_admin
+from src.auth import auth_manager, require_auth
 
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/auth/register', methods=['POST'])
-@require_auth
-@require_admin
 def register():
-    """Đăng ký user mới (chỉ admin)"""
+    """Đăng ký user mới (ai cũng đăng ký được)"""
     try:
         data = request.json
         username = data.get('username', '').strip()
         password = data.get('password', '').strip()
-        role = data.get('role', 'user')
-
         if not username or not password:
             return jsonify({'error': 'Username và password không được để trống'}), 400
-
         if len(password) < 6:
             return jsonify({'error': 'Password phải có ít nhất 6 ký tự'}), 400
-
-        result = auth_manager.register_user(username, password, role)
+        result = auth_manager.register_user(username, password)
         if result['success']:
             return jsonify(result), 201
         else:
             return jsonify(result), 400
-
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

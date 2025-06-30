@@ -102,15 +102,15 @@ class FileSearchEngine:
         query_lower = query.lower()
         query_words = set(query_lower.split())
         results = []
-        
+        print(f"[DEBUG][search_by_content] Query: {query_lower}")
         for file_id, file_data in self.index_data.items():
             content_preview = file_data['content_preview'].lower()
             keywords = set(file_data['keywords'])
-            
             # Tính điểm match
             content_match = sum(1 for word in query_words if word in content_preview)
             keyword_match = len(query_words.intersection(keywords))
-            
+            print(f"[DEBUG][search_by_content] File: {file_data['original_name']}, Content preview: {content_preview[:100]}")
+            print(f"[DEBUG][search_by_content] Content match: {content_match}, Keyword match: {keyword_match}")
             if content_match > 0 or keyword_match > 0:
                 results.append({
                     'id': file_data['id'],
@@ -122,7 +122,6 @@ class FileSearchEngine:
                     'match_score': content_match + keyword_match * 2,
                     'content_preview': file_data['content_preview'][:200] + "..."
                 })
-        
         # Sắp xếp theo độ phù hợp
         results.sort(key=lambda x: x['match_score'], reverse=True)
         return results[:10]
@@ -131,13 +130,10 @@ class FileSearchEngine:
         """Tìm kiếm tổng hợp theo tên và nội dung"""
         name_results = self.search_by_name(query)
         content_results = self.search_by_content(query)
-        
         # Gộp kết quả và loại bỏ duplicate
         all_results = {}
-        
         for result in name_results:
             all_results[result['id']] = result
-        
         for result in content_results:
             if result['id'] in all_results:
                 # Nếu file xuất hiện trong cả 2 kết quả, tăng điểm
@@ -145,11 +141,10 @@ class FileSearchEngine:
                 all_results[result['id']]['match_type'] = 'both'
             else:
                 all_results[result['id']] = result
-        
         # Sắp xếp theo điểm tổng hợp
         final_results = list(all_results.values())
         final_results.sort(key=lambda x: x['match_score'], reverse=True)
-        
+        print(f"[DEBUG][search_all] Tổng kết kết quả search_all: {final_results}")
         return {
             'query': query,
             'total_results': len(final_results),

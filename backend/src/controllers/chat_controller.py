@@ -61,32 +61,70 @@ def get_chat_messages(session_id):
 @chat_bp.route('/chat/sessions/<session_id>/send', methods=['POST'])
 @require_auth
 def send_message(session_id):
-    """Gửi message trong một session"""
+    """Gửi message trong session"""
     try:
         data = request.json
         message = data.get('message', '').strip()
-        file_urls = data.get('file_urls', [])
-        
+        print(f"[DEBUG][send_message] Message: {message}")
         if not message:
             return jsonify({'error': 'Message không được để trống'}), 400
-        
-        user_id = request.user['user_id']
-        username = request.user['username']
-        
+        # Kiểm tra xem có phải là câu hỏi tìm kiếm file không
+        search_keywords = ['tìm', 'file', 'tài liệu', 'document', 'search', 'find']
+        is_file_search = any(keyword in message.lower() for keyword in search_keywords)
+        if is_file_search:
+            # 1. Trả về thông báo đang tìm kiếm (nếu muốn streaming thì yield, ở đây trả về sau cùng)
+            # 2. Tìm file
+            search_results = file_search_engine.search_all(message)
+            print(f"[DEBUG][send_message] Search results: {search_results}")
+            files_found = []
+            metadata_results = []
+            for result in search_results['results'][:5]:
+                # Lấy thông tin file
+                file_info = file_manager.get_file_by_id(result['id'])
+                if not file_info:
+                    continue
+                # 3. Phân loại file bằng AI (LLM)
+                classification = file_classifier.classify_file(file_info['file_path'], file_info['original_name'])
+                # 4. Gửi metadata lên cloud
+                cloud_result = cloud_integration.send_metadata_to_cloud(file_info, classification)
+                metadata_results.append({
+                    'file_id': file_info['id'],
+                    'classification': classification,
+                    'cloud_result': cloud_result
+                })
+                # 5. Chuẩn bị dữ liệu trả về
+                file_url = f"/api/user/files/download/{file_info['id']}"
+                files_found.append({
+                    'name': file_info['original_name'],
+                    'type': file_info['file_type'],
+                    'uploaded_by': file_info['uploaded_by'],
+                    'match_score': result['match_score'],
+                    'download_url': file_url,
+                    'classification': classification
+                })
+            if files_found:
+                response = f"Đã tìm thấy {len(files_found)} file, metadata đã gửi.\n"
+                for i, file_info in enumerate(files_found, 1):
+                    response += f"{i}. {file_info['name']} ({file_info['type']}) - Nhóm: {file_info['classification'].get('group_name','?')} - [Tải về]({file_info['download_url']})\n"
+            else:
+                response = "Không tìm thấy file nào phù hợp với yêu cầu của bạn."
+            return jsonify({
+                'success': True,
+                'response': response,
+                'files': files_found,
+                'metadata_results': metadata_results,
+                'is_file_search': True
+            })
+        # Nếu không phải tìm file, xử lý chat bình thường
         result = chat_manager.send_message(
             session_id=session_id,
             message=message,
-            user_id=user_id,
-            username=username,
-            file_urls=file_urls
+            user_id=request.user['user_id'],
+            username=request.user['username']
         )
-        
-        if result['success']:
-            return jsonify(result)
-        else:
-            return jsonify(result), 400
-            
+        return jsonify(result)
     except Exception as e:
+        print(f"[DEBUG][send_message] Exception: {e}")
         return jsonify({'error': str(e)}), 500
 
 @chat_bp.route('/chat/sessions/<session_id>', methods=['DELETE'])
