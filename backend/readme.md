@@ -1,3 +1,4 @@
+python backend/app.py
 đây chỉ các bước test trong postman
 1. truy cập http://localhost:5000/apidocs
 2. /api/auth/login (login as admin /username: admin - password: admin123)
