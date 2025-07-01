@@ -11,7 +11,34 @@ chat_bp = Blueprint('chat', __name__)
 @chat_bp.route('/chat/sessions', methods=['POST'])
 @require_auth
 def create_chat_session():
-    """Tạo chat session mới"""
+    """
+    Tạo chat session mới
+    ---
+    tags:
+      - Chat
+    parameters:
+      - name: Authorization
+        in: header
+        type: string
+        required: true
+        description: Bearer token
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            title:
+              type: string
+              example: "Chat về kế hoạch"
+    responses:
+      200:
+        description: Tạo session thành công
+        examples:
+          application/json: { "success": true, "session": {"id": "abc123", "title": "Chat về kế hoạch"} }
+      401:
+        description: Không xác thực
+    """
     try:
         data = request.json
         title = data.get('title', 'New Chat')
@@ -35,7 +62,81 @@ def create_chat_session():
 @chat_bp.route('/chat/sessions', methods=['GET'])
 @require_auth
 def get_chat_sessions():
-    """Lấy danh sách chat sessions của user"""
+    """
+    Lấy danh sách chat sessions của user
+    ---
+    tags:
+      - Chat
+    parameters:
+      - name: Authorization
+        in: header
+        type: string
+        required: true
+        description: Bearer token (JWT)
+        example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJ1c2VyMSIsInJvbGUiOiJ1c2VyIiwiZXhwIjoxNzM1Njg5NjAwfQ.example_signature"
+    responses:
+      200:
+        description: Danh sách chat sessions
+        schema:
+          type: object
+          properties:
+            sessions:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "session_123"
+                  title:
+                    type: string
+                    example: "Chat về kế hoạch 2024"
+                  created_at:
+                    type: string
+                    format: date-time
+                    example: "2024-01-01T00:00:00Z"
+                  updated_at:
+                    type: string
+                    format: date-time
+                    example: "2024-01-01T12:00:00Z"
+                  message_count:
+                    type: integer
+                    example: 5
+        examples:
+          application/json: {
+            "sessions": [
+              {
+                "id": "session_123",
+                "title": "Chat về kế hoạch 2024",
+                "created_at": "2024-01-01T00:00:00Z",
+                "updated_at": "2024-01-01T12:00:00Z",
+                "message_count": 5
+              }
+            ]
+          }
+      401:
+        description: Không xác thực
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Token không hợp lệ"
+          }
+      500:
+        description: Lỗi server
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Lỗi server nội bộ"
+          }
+    """
     try:
         user_id = request.user['user_id']
         username = request.user['username']
@@ -49,7 +150,106 @@ def get_chat_sessions():
 @chat_bp.route('/chat/sessions/<session_id>', methods=['GET'])
 @require_auth
 def get_chat_messages(session_id):
-    """Lấy danh sách messages trong một session"""
+    """
+    Lấy danh sách messages trong một session
+    ---
+    tags:
+      - Chat
+    parameters:
+      - name: Authorization
+        in: header
+        type: string
+        required: true
+        description: Bearer token (JWT)
+        example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJ1c2VyMSIsInJvbGUiOiJ1c2VyIiwiZXhwIjoxNzM1Njg5NjAwfQ.example_signature"
+      - name: session_id
+        in: path
+        type: string
+        required: true
+        description: ID của chat session
+        example: "session_123"
+      - name: limit
+        in: query
+        type: integer
+        required: false
+        description: Số lượng messages tối đa (mặc định 50)
+        example: 50
+    responses:
+      200:
+        description: Danh sách messages
+        schema:
+          type: object
+          properties:
+            messages:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "msg_123"
+                  content:
+                    type: string
+                    example: "Xin chào, tôi cần tìm file về kế hoạch 2024"
+                  role:
+                    type: string
+                    example: "user"
+                    enum: ["user", "assistant"]
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2024-01-01T12:00:00Z"
+        examples:
+          application/json: {
+            "messages": [
+              {
+                "id": "msg_123",
+                "content": "Xin chào, tôi cần tìm file về kế hoạch 2024",
+                "role": "user",
+                "timestamp": "2024-01-01T12:00:00Z"
+              },
+              {
+                "id": "msg_124",
+                "content": "Tôi đã tìm thấy 2 file phù hợp với yêu cầu của bạn...",
+                "role": "assistant",
+                "timestamp": "2024-01-01T12:01:00Z"
+              }
+            ]
+          }
+      401:
+        description: Không xác thực
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Token không hợp lệ"
+          }
+      404:
+        description: Session không tồn tại
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Session không tồn tại"
+          }
+      500:
+        description: Lỗi server
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Lỗi server nội bộ"
+          }
+    """
     try:
         limit = request.args.get('limit', 50, type=int)
         messages = chat_manager.get_chat_messages(session_id, limit)
@@ -61,7 +261,39 @@ def get_chat_messages(session_id):
 @chat_bp.route('/chat/sessions/<session_id>/send', methods=['POST'])
 @require_auth
 def send_message(session_id):
-    """Gửi message trong session"""
+    """
+    Gửi message trong session (tìm file hoặc chat AI)
+    ---
+    tags:
+      - Chat
+    parameters:
+      - name: Authorization
+        in: header
+        type: string
+        required: true
+        description: Bearer token
+      - name: session_id
+        in: path
+        type: string
+        required: true
+        description: ID session
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Tìm file có nội dung về kế hoạch 2024"
+    responses:
+      200:
+        description: Kết quả chat hoặc tìm file
+        examples:
+          application/json: { "success": true, "response": "Đã tìm thấy 2 file...", "files": [{"name": "plan2024.pdf"}] }
+      401:
+        description: Không xác thực
+    """
     try:
         data = request.json
         message = data.get('message', '').strip()
@@ -73,8 +305,10 @@ def send_message(session_id):
         is_file_search = any(keyword in message.lower() for keyword in search_keywords)
         if is_file_search:
             # 1. Trả về thông báo đang tìm kiếm (nếu muốn streaming thì yield, ở đây trả về sau cùng)
-            # 2. Tìm file
-            search_results = file_search_engine.search_all(message)
+            # 2. Tìm file với lọc theo quyền truy cập
+            user_id = request.user['user_id']
+            user_role = request.user['role']
+            search_results = file_search_engine.search_all(message, user_id, user_role)
             print(f"[DEBUG][send_message] Search results: {search_results}")
             files_found = []
             metadata_results = []
@@ -130,7 +364,101 @@ def send_message(session_id):
 @chat_bp.route('/chat/sessions/<session_id>', methods=['DELETE'])
 @require_auth
 def delete_chat_session(session_id):
-    """Xóa chat session"""
+    """
+    Xóa chat session
+    ---
+    tags:
+      - Chat
+    parameters:
+      - name: Authorization
+        in: header
+        type: string
+        required: true
+        description: Bearer token (JWT)
+        example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJ1c2VyMSIsInJvbGUiOiJ1c2VyIiwiZXhwIjoxNzM1Njg5NjAwfQ.example_signature"
+      - name: session_id
+        in: path
+        type: string
+        required: true
+        description: ID của chat session cần xóa
+        example: "session_123"
+    responses:
+      200:
+        description: Xóa session thành công
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            message:
+              type: string
+              example: "Xóa session thành công"
+        examples:
+          application/json: {
+            "success": true,
+            "message": "Xóa session thành công"
+          }
+      400:
+        description: Không thể xóa session
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: false
+            error:
+              type: string
+        examples:
+          application/json: {
+            "success": false,
+            "error": "Không thể xóa session"
+          }
+      401:
+        description: Không xác thực
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Token không hợp lệ"
+          }
+      403:
+        description: Không có quyền xóa session
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Không có quyền xóa session này"
+          }
+      404:
+        description: Session không tồn tại
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Session không tồn tại"
+          }
+      500:
+        description: Lỗi server
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Lỗi server nội bộ"
+          }
+    """
     try:
         user_id = request.user['user_id']
         result = chat_manager.delete_chat_session(session_id, user_id)
@@ -146,7 +474,124 @@ def delete_chat_session(session_id):
 @chat_bp.route('/chat/sessions/<session_id>/title', methods=['PUT'])
 @require_auth
 def update_session_title(session_id):
-    """Cập nhật tiêu đề chat session"""
+    """
+    Cập nhật tiêu đề chat session
+    ---
+    tags:
+      - Chat
+    consumes:
+      - application/json
+    parameters:
+      - name: Authorization
+        in: header
+        type: string
+        required: true
+        description: Bearer token (JWT)
+        example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJ1c2VyMSIsInJvbGUiOiJ1c2VyIiwiZXhwIjoxNzM1Njg5NjAwfQ.example_signature"
+      - name: session_id
+        in: path
+        type: string
+        required: true
+        description: ID của chat session
+        example: "session_123"
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - title
+          properties:
+            title:
+              type: string
+              description: Tiêu đề mới cho session
+              example: "Kế hoạch kinh doanh 2024"
+    responses:
+      200:
+        description: Cập nhật tiêu đề thành công
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            message:
+              type: string
+              example: "Cập nhật tiêu đề thành công"
+            session:
+              type: object
+              properties:
+                id:
+                  type: string
+                  example: "session_123"
+                title:
+                  type: string
+                  example: "Kế hoạch kinh doanh 2024"
+        examples:
+          application/json: {
+            "success": true,
+            "message": "Cập nhật tiêu đề thành công",
+            "session": {
+              "id": "session_123",
+              "title": "Kế hoạch kinh doanh 2024"
+            }
+          }
+      400:
+        description: Dữ liệu không hợp lệ
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Title không được để trống"
+          }
+      401:
+        description: Không xác thực
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Token không hợp lệ"
+          }
+      403:
+        description: Không có quyền cập nhật session
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Không có quyền cập nhật session này"
+          }
+      404:
+        description: Session không tồn tại
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Session không tồn tại"
+          }
+      500:
+        description: Lỗi server
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Lỗi server nội bộ"
+          }
+    """
     try:
         data = request.json
         title = data.get('title', '').strip()
@@ -165,56 +610,86 @@ def update_session_title(session_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@chat_bp.route('/chat/public/sessions', methods=['POST'])
-def create_public_chat_session():
-    """Tạo public chat session (không cần auth)"""
-    try:
-        data = request.json
-        title = data.get('title', 'Public Chat')
-        
-        result = chat_manager.create_chat_session(
-            user_id=None,
-            username="anonymous",
-            title=title
-        )
-        
-        if result['success']:
-            return jsonify(result), 201
-        else:
-            return jsonify(result), 400
-            
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
-@chat_bp.route('/chat/public/sessions/<session_id>/send', methods=['POST'])
-def send_public_message(session_id):
-    """Gửi message trong public session"""
-    try:
-        data = request.json
-        message = data.get('message', '').strip()
-        
-        if not message:
-            return jsonify({'error': 'Message không được để trống'}), 400
-        
-        result = chat_manager.send_message(
-            session_id=session_id,
-            message=message,
-            user_id=None,
-            username="anonymous"
-        )
-        
-        if result['success']:
-            return jsonify(result)
-        else:
-            return jsonify(result), 400
-            
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+
+
 
 @chat_bp.route('/chat', methods=['POST'])
 @require_auth
 def chat():
-    """Legacy chat endpoint"""
+    """
+    Legacy chat endpoint (tự động tạo session)
+    ---
+    tags:
+      - Chat
+    consumes:
+      - application/json
+    parameters:
+      - name: Authorization
+        in: header
+        type: string
+        required: true
+        description: Bearer token (JWT)
+        example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJ1c2VyMSIsInJvbGUiOiJ1c2VyIiwiZXhwIjoxNzM1Njg5NjAwfQ.example_signature"
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - message
+          properties:
+            message:
+              type: string
+              description: Nội dung tin nhắn
+              example: "Xin chào, tôi cần tư vấn về dự án"
+    responses:
+      200:
+        description: Chat thành công
+        schema:
+          type: object
+          properties:
+            response:
+              type: string
+              example: "Xin chào! Tôi có thể giúp gì cho bạn về dự án?"
+        examples:
+          application/json: {
+            "response": "Xin chào! Tôi có thể giúp gì cho bạn về dự án?"
+          }
+      400:
+        description: Dữ liệu không hợp lệ
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Message không được để trống"
+          }
+      401:
+        description: Không xác thực
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Token không hợp lệ"
+          }
+      500:
+        description: Lỗi server
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Lỗi server nội bộ"
+          }
+    """
     try:
         data = request.json
         message = data.get('message', '').strip()
@@ -251,46 +726,135 @@ def chat():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@chat_bp.route('/chat/public', methods=['POST'])
-def chat_public():
-    """Public chat endpoint cũ (legacy)"""
-    try:
-        data = request.json
-        message = data.get('message', '').strip()
-        
-        if not message:
-            return jsonify({'error': 'Message không được để trống'}), 400
-        
-        # Tạo public session
-        session_result = chat_manager.create_chat_session(
-            user_id=None,
-            username="anonymous",
-            title="Public Chat"
-        )
-        
-        if session_result['success']:
-            session_id = session_result['session']['id']
-            result = chat_manager.send_message(
-                session_id=session_id,
-                message=message,
-                user_id=None,
-                username="anonymous"
-            )
-            
-            if result['success']:
-                return jsonify({'response': result['response']})
-            else:
-                return jsonify(result), 400
-        else:
-            return jsonify(session_result), 400
-            
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+
 
 @chat_bp.route('/chat/enhanced', methods=['POST'])
 @require_auth
 def chat_enhanced():
-    """Chat với khả năng tìm kiếm file"""
+    """
+    Chat với khả năng tìm kiếm file
+    ---
+    tags:
+      - Enhanced Chat
+    consumes:
+      - application/json
+    parameters:
+      - name: Authorization
+        in: header
+        type: string
+        required: true
+        description: Bearer token (JWT)
+        example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJ1c2VyMSIsInJvbGUiOiJ1c2VyIiwiZXhwIjoxNzM1Njg5NjAwfQ.example_signature"
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - message
+          properties:
+            message:
+              type: string
+              description: Nội dung tin nhắn hoặc yêu cầu tìm kiếm file
+              example: "Tìm file về kế hoạch 2024"
+            session_id:
+              type: string
+              description: ID session (tùy chọn, nếu không có sẽ tạo mới)
+              example: "session_123"
+    responses:
+      200:
+        description: Chat hoặc tìm kiếm thành công
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            response:
+              type: string
+              example: "Đã tìm thấy 2 file phù hợp với yêu cầu của bạn..."
+            session_id:
+              type: string
+              example: "session_123"
+            is_file_search:
+              type: boolean
+              example: true
+            search_results:
+              type: object
+              description: Kết quả tìm kiếm (chỉ có khi is_file_search = true)
+              properties:
+                total_results:
+                  type: integer
+                  example: 2
+                results:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: "file_123"
+                      name:
+                        type: string
+                        example: "ke_hoach_2024.pdf"
+                      type:
+                        type: string
+                        example: "pdf"
+                      match_score:
+                        type: number
+                        example: 0.85
+        examples:
+          application/json: {
+            "success": true,
+            "response": "Đã tìm thấy 2 file phù hợp với yêu cầu của bạn:\n1. ke_hoach_2024.pdf (pdf) - Điểm: 0.85\n2. bao_cao_2024.docx (docx) - Điểm: 0.72",
+            "session_id": "session_123",
+            "is_file_search": true,
+            "search_results": {
+              "total_results": 2,
+              "results": [
+                {
+                  "id": "file_123",
+                  "name": "ke_hoach_2024.pdf",
+                  "type": "pdf",
+                  "match_score": 0.85
+                }
+              ]
+            }
+          }
+      400:
+        description: Dữ liệu không hợp lệ
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Message không được để trống"
+          }
+      401:
+        description: Không xác thực
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Token không hợp lệ"
+          }
+      500:
+        description: Lỗi server
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Lỗi server nội bộ"
+          }
+    """
     try:
         data = request.json
         message = data.get('message', '').strip()
@@ -304,8 +868,10 @@ def chat_enhanced():
         is_file_search = any(keyword in message.lower() for keyword in search_keywords)
         
         if is_file_search:
-            # Thực hiện tìm kiếm file
-            search_results = file_search_engine.search_all(message)
+            # Thực hiện tìm kiếm file với lọc theo quyền truy cập
+            user_id = request.user['user_id']
+            user_role = request.user['role']
+            search_results = file_search_engine.search_all(message, user_id, user_role)
             
             # Tạo response cho tìm kiếm file
             if search_results['total_results'] > 0:

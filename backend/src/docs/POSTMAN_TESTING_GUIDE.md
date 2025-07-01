@@ -26,8 +26,8 @@ Content-Type: application/json
 
 Body (raw JSON):
 {
-    "username": "admin",
-    "password": "admin123"
+    "username": "user1",
+    "password": "123123"
 }
 ```
 
@@ -492,3 +492,93 @@ console.log("Testing endpoint:", pm.request.url);
 - `/api/enhanced_chat/*` - Enhanced Chat with File Integration
 
 Chạy theo thứ tự này để test đầy đủ tất cả tính năng của backend đã refactor! 🎉 
+
+## 1. Đăng nhập lấy token (nếu cần)
+- **Endpoint:** `POST /api/auth/login`
+- **Body:**
+```json
+{
+  "username": "your_username",
+  "password": "your_password"
+}
+```
+- **Lưu ý:** Lấy token từ response để dùng cho các request cần xác thực (Bearer Token).
+
+---
+
+## 2. Tạo chat session
+- **Endpoint:** `POST /api/chat/sessions`
+- **Headers:**
+  - `Authorization: Bearer <token>`
+- **Body:**
+```json
+{
+  "title": "Test tìm file"
+}
+```
+- **Lưu ý:** Lấy `session_id` từ response để dùng cho các bước tiếp theo.
+
+---
+
+## 3. Gửi message tìm file (test full flow AI phân loại + cloud)
+- **Endpoint:** `POST /api/chat/sessions/<session_id>/send`
+- **Headers:**
+  - `Authorization: Bearer <token>`
+- **Body:**
+```json
+{
+  "message": "Tìm file có nội dung về kế hoạch 2024"
+}
+```
+- **Kết quả mong đợi:**
+  - Response trả về:
+    - `response`: Thông báo số file tìm thấy, nhóm AI phân loại, link tải file.
+    - `files`: Danh sách file (tên, loại, nhóm, link tải, ...).
+    - `metadata_results`: Kết quả gửi metadata từng file lên cloud.
+    - `is_file_search`: true
+
+---
+
+## 4. Kiểm tra link tải file
+- Copy trường `download_url` từ response ở bước 3.
+- **Endpoint:** `GET /api/user/files/download/<file_id>`
+- **Headers:**
+  - `Authorization: Bearer <token>`
+- **Kết quả:** File được tải về nếu có quyền.
+
+---
+
+## 5. Kiểm tra metadata trên cloud (nếu có)
+- Xem trường `cloud_result` trong `metadata_results` của response bước 3.
+- Nếu có cloud, kiểm tra trên dashboard cloud hoặc qua API cloud.
+
+---
+
+## 6. Test phân loại file thủ công (nếu muốn)
+- **Endpoint:** `POST /api/files/<file_id>/classify`
+- **Headers:**
+  - `Authorization: Bearer <token>`
+- **Kết quả:** Trả về nhóm AI phân loại cho file.
+
+---
+
+## 7. Test upload file mới
+- **Endpoint:** `POST /api/user/files`
+- **Headers:**
+  - `Authorization: Bearer <token>`
+- **Body:**
+  - Form-data: key `file` (chọn file upload)
+- **Kết quả:** File được upload, phân loại, index, gửi metadata lên cloud.
+
+---
+
+## 8. Test các trường hợp lỗi
+- Gửi message không có từ khóa tìm file → AI chat bình thường.
+- Gửi message tìm file nhưng không có file phù hợp → Response báo không tìm thấy file.
+- Gửi request download file không có quyền → Response báo lỗi 403.
+
+---
+
+**Lưu ý:**
+- Luôn kiểm tra log backend để debug nếu có lỗi hoặc không đúng flow.
+- Nếu cần test thêm API nào, bổ sung vào file này. 

@@ -69,12 +69,17 @@ class FileSearchEngine:
         
         return list(set(keywords))  # Loại bỏ duplicate
     
-    def search_by_name(self, query: str) -> List[Dict]:
-        """Tìm kiếm file theo tên"""
+    def search_by_name(self, query: str, user_id: str = None, user_role: str = None) -> List[Dict]:
+        """Tìm kiếm file theo tên với lọc theo quyền truy cập"""
         query_lower = query.lower()
         results = []
         
         for file_id, file_data in self.index_data.items():
+            # Lọc theo quyền truy cập
+            if user_id and user_role != 'admin':
+                if file_data['uploaded_by'] != user_id:
+                    continue
+            
             original_name = file_data['original_name'].lower()
             stored_name = file_data['stored_name'].lower()
             
@@ -97,13 +102,18 @@ class FileSearchEngine:
         results.sort(key=lambda x: x['match_score'], reverse=True)
         return results[:10]  # Trả về top 10
     
-    def search_by_content(self, query: str) -> List[Dict]:
-        """Tìm kiếm file theo nội dung"""
+    def search_by_content(self, query: str, user_id: str = None, user_role: str = None) -> List[Dict]:
+        """Tìm kiếm file theo nội dung với lọc theo quyền truy cập"""
         query_lower = query.lower()
         query_words = set(query_lower.split())
         results = []
         print(f"[DEBUG][search_by_content] Query: {query_lower}")
         for file_id, file_data in self.index_data.items():
+            # Lọc theo quyền truy cập
+            if user_id and user_role != 'admin':
+                if file_data['uploaded_by'] != user_id:
+                    continue
+            
             content_preview = file_data['content_preview'].lower()
             keywords = set(file_data['keywords'])
             # Tính điểm match
@@ -126,10 +136,11 @@ class FileSearchEngine:
         results.sort(key=lambda x: x['match_score'], reverse=True)
         return results[:10]
     
-    def search_all(self, query: str) -> Dict:
-        """Tìm kiếm tổng hợp theo tên và nội dung"""
-        name_results = self.search_by_name(query)
-        content_results = self.search_by_content(query)
+    def search_all(self, query: str, user_id: str = None, user_role: str = None) -> Dict:
+        """Tìm kiếm tổng hợp theo tên và nội dung với lọc theo quyền truy cập"""
+        name_results = self.search_by_name(query, user_id, user_role)
+        content_results = self.search_by_content(query, user_id, user_role)
+        
         # Gộp kết quả và loại bỏ duplicate
         all_results = {}
         for result in name_results:
@@ -141,6 +152,7 @@ class FileSearchEngine:
                 all_results[result['id']]['match_type'] = 'both'
             else:
                 all_results[result['id']] = result
+        
         # Sắp xếp theo điểm tổng hợp
         final_results = list(all_results.values())
         final_results.sort(key=lambda x: x['match_score'], reverse=True)
@@ -152,6 +164,54 @@ class FileSearchEngine:
             'content_results': len(content_results),
             'results': final_results[:10]
         }
+    
+    def search_files(self, query: str, user_id: str = None, user_role: str = None, search_type: str = 'both', limit: int = 20) -> List[Dict]:
+        """Tìm kiếm file với các tùy chọn linh hoạt"""
+        if search_type == 'name':
+            results = self.search_by_name(query, user_id, user_role)
+        elif search_type == 'content':
+            results = self.search_by_content(query, user_id, user_role)
+        else:  # 'both'
+            # Sử dụng search_all nhưng chỉ lấy results
+            search_result = self.search_all(query, user_id, user_role)
+            results = search_result['results']
+        
+        # Giới hạn số lượng kết quả
+        return results[:limit]
+    
+    def get_search_suggestions(self, user_id: str = None, user_role: str = None, query: str = '') -> List[str]:
+        """Lấy gợi ý từ khóa tìm kiếm dựa trên file của user"""
+        suggestions = []
+        
+        # Lấy tất cả file mà user có quyền truy cập
+        user_files = []
+        for file_id, file_data in self.index_data.items():
+            if user_id and user_role != 'admin':
+                if file_data['uploaded_by'] != user_id:
+                    continue
+            user_files.append(file_data)
+        
+        # Trích xuất keywords từ tên file và nội dung
+        all_keywords = set()
+        for file_data in user_files:
+            # Keywords từ tên file
+            filename_words = re.findall(r'\w+', file_data['original_name'].lower())
+            all_keywords.update(filename_words)
+            
+            # Keywords từ nội dung
+            if file_data['keywords']:
+                all_keywords.update(file_data['keywords'])
+        
+        # Lọc theo query nếu có
+        if query:
+            query_lower = query.lower()
+            suggestions = [kw for kw in all_keywords if query_lower in kw.lower() and len(kw) > 2]
+        else:
+            suggestions = [kw for kw in all_keywords if len(kw) > 2]
+        
+        # Sắp xếp và giới hạn kết quả
+        suggestions.sort()
+        return suggestions[:10]
     
     def calculate_name_match_score(self, query: str, filename: str) -> int:
         """Tính điểm match cho tên file"""

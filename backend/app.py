@@ -1,6 +1,7 @@
 import os
 from flask import Flask
 from flask_cors import CORS
+from flasgger import Swagger
 
 # Load environment variables
 from dotenv import load_dotenv
@@ -17,6 +18,7 @@ print("=== END FAISS PATHS ===")
 
 app = Flask(__name__)
 CORS(app)  # Cho phép CORS
+swagger = Swagger(app)
 
 # Register all blueprints with /api prefix
 for blueprint in all_blueprints:
@@ -35,7 +37,6 @@ if __name__ == '__main__':
     print("- /api/file/* - File management endpoints")
     print("- /api/search/* - File search endpoints")
     print("- /api/system/* - System status endpoints")
-    print("- /api/public_chat/* - Public chat endpoints")
     print("- /api/enhanced_chat/* - Enhanced chat endpoints")
     
     app.run(host='0.0.0.0', port=port, debug=debug) 
