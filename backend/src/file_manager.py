@@ -1,9 +1,10 @@
 import os
 import uuid
+import json
 from typing import Dict, List, Optional
 from datetime import datetime
 import shutil
-from src.database import get_db, File as DBFile
+from src.database import get_db, File as DBFile, FilePermission
 
 # Import new components
 from src.file_search import file_search_engine
@@ -160,6 +161,128 @@ class FileManager:
                     "classification": classification,
                     "metadata_result": metadata_result,
                     "cloud_result": cloud_result
+                }
+
+            except Exception as e:
+                db.rollback()
+                # Xóa file vật lý nếu lưu database thất bại
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                return {"success": False, "message": f"Lỗi khi lưu thông tin file: {str(e)}"}
+            finally:
+                db.close()
+
+        except Exception as e:
+            return {"success": False, "message": f"Lỗi khi upload file: {str(e)}"}
+
+    def add_file_with_permissions(self, file, uploaded_by: str, allowed_users: List[str] = None) -> Dict:
+        """Thêm file mới với phân quyền cho admin"""
+        try:
+            if not file or file.filename == '':
+                return {"success": False, "message": "Không có file được chọn"}
+
+            # Tạo tên file unique
+            filename = file.filename
+            base_name, ext = os.path.splitext(filename)
+            counter = 1
+            while os.path.exists(os.path.join(self.upload_folder, filename)):
+                filename = f"{base_name}_{counter}{ext}"
+                counter += 1
+
+            # Lưu file
+            file_path = os.path.join(self.upload_folder, filename)
+            file.save(file_path)
+
+            # Lưu thông tin file vào database với phân quyền
+            db = next(get_db())
+            try:
+                file_info = DBFile(
+                    id=str(uuid.uuid4()),
+                    original_name=file.filename,
+                    stored_name=filename,
+                    file_path=file_path,
+                    file_size=os.path.getsize(file_path),
+                    file_type=file.content_type or "unknown",
+                    uploaded_by=uploaded_by,
+                    uploaded_at=datetime.utcnow(),
+                    is_active=True
+                )
+
+                db.add(file_info)
+                db.commit()
+                db.refresh(file_info)
+
+                # Lưu thông tin phân quyền nếu có
+                if allowed_users:
+                    for user_id in allowed_users:
+                        permission = FilePermission(
+                            id=str(uuid.uuid4()),
+                            file_id=file_info.id,
+                            user_id=user_id,
+                            can_read=True,
+                            can_write=False,
+                            created_at=datetime.utcnow()
+                        )
+                        db.add(permission)
+                    db.commit()
+
+                # Cập nhật search index
+                file_search_engine.update_index(file_info.id)
+
+                # Thêm nội dung file vào FAISS database để semantic search
+                try:
+                    from src.file_utils.file_loader import load_document_from_file
+                    documents = load_document_from_file(file_path)
+                    if documents:
+                        for doc in documents:
+                            metadata = {
+                                "source": "uploaded_file",
+                                "file_id": file_info.id,
+                                "file_name": file_info.original_name,
+                                "file_type": file_info.file_type,
+                                "uploaded_by": file_info.uploaded_by
+                            }
+                            doc.metadata = metadata
+                            vectordb.add_document(vectordb.init_vector_store(), doc.page_content, metadata)
+                        print(f"Added file {file_info.original_name} to FAISS database")
+                except Exception as e:
+                    print(f"Error adding file to FAISS database: {e}")
+
+                # Phân loại file bằng AI
+                classification = file_classifier.classify_file(file_path, file.filename)
+                
+                # Cập nhật metadata
+                metadata_result = file_classifier.update_file_metadata(file_info.id, classification)
+
+                # Gửi metadata lên cloud
+                file_data = {
+                    'id': file_info.id,
+                    'original_name': file_info.original_name,
+                    'stored_name': file_info.stored_name,
+                    'file_path': file_info.file_path,
+                    'file_size': file_info.file_size,
+                    'file_type': file_info.file_type,
+                    'uploaded_by': file_info.uploaded_by,
+                    'uploaded_at': file_info.uploaded_at.isoformat() if file_info.uploaded_at else None
+                }
+                cloud_result = cloud_integration.send_metadata_to_cloud(file_data, classification)
+
+                return {
+                    "success": True,
+                    "message": "Upload file thành công",
+                    "file": {
+                        "id": file_info.id,
+                        "original_name": file_info.original_name,
+                        "stored_name": file_info.stored_name,
+                        "file_size": file_info.file_size,
+                        "file_type": file_info.file_type,
+                        "uploaded_by": file_info.uploaded_by,
+                        "uploaded_at": file_info.uploaded_at.isoformat() if file_info.uploaded_at else None
+                    },
+                    "classification": classification,
+                    "metadata_result": metadata_result,
+                    "cloud_result": cloud_result,
+                    "allowed_users": allowed_users or []
                 }
 
             except Exception as e:

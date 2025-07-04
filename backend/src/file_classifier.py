@@ -139,6 +139,7 @@ class FileClassifier:
     
     def classify_file(self, file_path: str, filename: str) -> Dict:
         """Phân loại file tổng hợp"""
+        print(f"Classifying file: {file_path}")
         # Thử phân loại theo nội dung trước
         content_classification = self.classify_file_by_content(file_path)
         
@@ -180,6 +181,7 @@ class FileClassifier:
     
     def update_file_metadata(self, file_id: str, classification: Dict) -> Dict:
         """Cập nhật metadata cho file"""
+        print(f"Updating file metadata: {file_id}")
         try:
             db = next(get_db())
             file = db.query(DBFile).filter(DBFile.id == file_id).first()
@@ -210,6 +212,14 @@ class FileClassifier:
             return {'success': False, 'error': str(e)}
         finally:
             db.close()
+
+    def get_file_groups_by_user(self, user_id):
+        """Lấy danh sách nhóm file cho user (dummy)"""
+        # Trả về tất cả các nhóm, có thể lọc theo user nếu cần
+        return [
+            {"group_id": gid, "name": info["name"]}
+            for gid, info in self.file_groups.items()
+        ]
 
 # Khởi tạo classifier
 file_classifier = FileClassifier() 

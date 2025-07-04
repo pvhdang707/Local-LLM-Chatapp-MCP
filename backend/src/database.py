@@ -54,6 +54,17 @@ class File(Base):
     uploaded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
 
+# File Permission model
+class FilePermission(Base):
+    __tablename__ = "file_permissions"
+    
+    id = Column(String(36), primary_key=True, index=True)
+    file_id = Column(String(36), nullable=False, index=True)
+    user_id = Column(String(36), nullable=False, index=True)
+    can_read = Column(Boolean, default=True, nullable=False)
+    can_write = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
 # Chat Session model
 class ChatSession(Base):
     __tablename__ = "chat_sessions"

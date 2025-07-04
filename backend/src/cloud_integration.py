@@ -223,5 +223,15 @@ class CloudIntegration:
             "results": results
         }
 
+    def get_file_metadata(self, file_id):
+        """Lấy metadata cho file từ cloud hoặc local (dummy)"""
+        # Có thể gọi get_metadata_from_cloud hoặc get_metadata_from_local nếu muốn
+        # Ở đây trả về mẫu đơn giản
+        return {
+            "synced": True,
+            "last_sync": "2024-01-01T00:00:00Z",
+            "success": True
+        }
+
 # Khởi tạo cloud integration
 cloud_integration = CloudIntegration() 

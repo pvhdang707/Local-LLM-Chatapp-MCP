@@ -39,4 +39,4 @@ if __name__ == '__main__':
     print("- /api/system/* - System status endpoints")
     print("- /api/enhanced_chat/* - Enhanced chat endpoints")
     
-    app.run(host='0.0.0.0', port=port, debug=debug) 
+    app.run(host='0.0.0.0', port=port, debug=True) 

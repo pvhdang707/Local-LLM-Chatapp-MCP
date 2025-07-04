@@ -4,6 +4,14 @@ import Sidebar from '../components/Sidebar';
 import ChatHistory from '../components/ChatHistory';
 import Welcome from '../components/Welcome';
 import Loading from '../components/Loading';
+import {
+  createChatSession,
+  getChatSessions,
+  getChatMessages,
+  sendMessage,
+  deleteChatSession,
+  updateSessionTitle
+} from '../services/chatApi';
 
 const ChatPage = () => {
   const [chats, setChats] = useState([]);
@@ -11,111 +19,101 @@ const ChatPage = () => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [username] = useState(localStorage.getItem('username'));
 
-  // Tạo phiên chat mới
-  const handleNewChat = () => {
-    const newChat = {
-      id: Date.now(),
-      title: 'Cuộc trò chuyện mới',
-      messages: [],
+  // Load danh sách session khi vào trang
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        const data = await getChatSessions();
+        if (data.sessions && data.sessions.length > 0) {
+          setChats(data.sessions);
+          setActiveChatId(data.sessions[0].id);
+          // Tự động load messages của session đầu tiên
+          await handleSelectChat(data.sessions[0].id);
+        } else {
+          // Nếu không có session nào, tự tạo mới
+          await handleNewChat();
+        }
+      } catch (err) {
+        setChats([]);
+        await handleNewChat();
+      }
     };
-    setChats((prev) => [newChat, ...prev]);
-    setActiveChatId(newChat.id);
-    setMessages([]);
+    fetchSessions();
+    // eslint-disable-next-line
+  }, []);
+
+  // Khi chọn session, load messages
+  const handleSelectChat = async (chatId) => {
+    setActiveChatId(chatId);
+    setIsLoading(true);
+    try {
+      const data = await getChatMessages(chatId);
+      // Chuẩn hóa message cho ChatHistory
+      const msgs = (data.messages || []).map((msg) => ({
+        id: msg.id,
+        text: msg.content,
+        sender: msg.role === 'user' ? 'user' : 'bot',
+        timestamp: msg.timestamp
+      }));
+      setMessages(msgs);
+    } catch (err) {
+      setMessages([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Chọn phiên chat
-  const handleSelectChat = (chatId) => {
-    const selectedChat = chats.find((chat) => chat.id === chatId);
-    if (selectedChat) {
-      setActiveChatId(chatId);
-      setMessages(selectedChat.messages);
+  // Tạo phiên chat mới
+  const handleNewChat = async () => {
+    setIsLoading(true);
+    try {
+      const data = await createChatSession('Cuộc trò chuyện mới');
+      const newChat = data.session;
+      setChats((prev) => [newChat, ...prev]);
+      setActiveChatId(newChat.id);
+      setMessages([]);
+    } catch (err) {
+      // Xử lý lỗi
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Xóa phiên chat
-  const handleDeleteChat = (chatId) => {
-    setChats((prev) => prev.filter((chat) => chat.id !== chatId));
-    if (activeChatId === chatId) {
-      setActiveChatId(null);
-      setMessages([]);
-    }
+  const handleDeleteChat = async (chatId) => {
+    setIsLoading(true);
+    try {
+      await deleteChatSession(chatId);
+      setChats((prev) => prev.filter((chat) => chat.id !== chatId));
+      if (activeChatId === chatId) {
+        setActiveChatId(null);
+        setMessages([]);
+      }
+    } catch (err) {}
+    setIsLoading(false);
   };
 
-  // Cập nhật tiêu đề chat dựa trên tin nhắn đầu tiên
-  const updateChatTitle = (chatId, firstMessage) => {
-    setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === chatId
-          ? { ...chat, title: firstMessage.text.slice(0, 30) + '...' }
-          : chat
-      )
-    );
-  };
-
+  // Gửi tin nhắn
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!inputMessage.trim()) return;
-
-    const newMessage = {
+    if (!inputMessage.trim() || !activeChatId) return;
+    const userMsg = {
       id: Date.now(),
       text: inputMessage,
       sender: 'user',
       timestamp: new Date().toISOString(),
     };
-
-    // Nếu chưa có phiên chat nào, tạo mới
-    if (!activeChatId) {
-      handleNewChat();
-    }
-
-    setMessages((prev) => [...prev, newMessage]);
+    setMessages((prev) => [...prev, userMsg]);
     setInputMessage('');
     setIsLoading(true);
-
     try {
-      const response = await fetch('http://localhost:5000/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message: inputMessage }),
-      });
-
-      const data = await response.json();
-      const botMessage = {
-        id: Date.now() + 1,
-        text: data.response,
-        sender: 'bot',
-        timestamp: new Date().toISOString(),
-      };
-
-      const updatedMessages = [...messages, newMessage, botMessage];
-      setMessages(updatedMessages);
-
-      // Cập nhật tin nhắn trong phiên chat
-      setChats((prev) =>
-        prev.map((chat) =>
-          chat.id === activeChatId
-            ? { ...chat, messages: updatedMessages }
-            : chat
-        )
-      );
-
-      // Cập nhật tiêu đề nếu là tin nhắn đầu tiên
-      if (messages.length === 0) {
-        updateChatTitle(activeChatId, newMessage);
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      const errorMessage = {
-        id: Date.now() + 1,
-        text: 'Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.',
-        sender: 'bot',
-        timestamp: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      // Gửi message lên server
+      const data = await sendMessage(activeChatId, userMsg.text);
+      // Lấy lại messages mới nhất
+      await handleSelectChat(activeChatId);
+    } catch (err) {
+      // Xử lý lỗi
     } finally {
       setIsLoading(false);
     }
@@ -123,7 +121,7 @@ const ChatPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Navbar username={username} />
+      <Navbar />
       <div className="flex px-4 pb-4">
         <Sidebar
           chats={chats}
@@ -150,10 +148,11 @@ const ChatPage = () => {
                   onChange={(e) => setInputMessage(e.target.value)}
                   placeholder="Nhập tin nhắn của bạn..."
                   className="flex-1 p-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                  disabled={!activeChatId || isLoading}
                 />
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || !activeChatId}
                   className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 disabled:bg-gray-400"
                 >
                   Gửi

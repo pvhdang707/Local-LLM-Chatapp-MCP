@@ -2,13 +2,32 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import ChatPage from './pages/ChatPage';
-import FileManager from './pages/FileManager';
 import AdminPage from './pages/AdminPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import FileUploadPage from './pages/FileUploadPage';
+import ProtectedRoute from './components/ProtectedRoute';
 
-const PrivateRoute = ({ children }) => {
-  const { user } = useAuth();
-  return user ? children : <Navigate to="/login" />;
+// Component để chuyển hướng dựa trên role
+const RoleBasedRedirect = () => {
+  const { isAdmin, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Đang kiểm tra quyền truy cập...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Chuyển hướng dựa trên role
+  if (isAdmin) {
+    return <Navigate to="/admin" replace />;
+  } else {
+    return <Navigate to="/user/files" replace />;
+  }
 };
 
 const App = () => {
@@ -17,31 +36,48 @@ const App = () => {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          
           <Route
             path="/chat"
             element={
-              <PrivateRoute>
+              <ProtectedRoute>
                 <ChatPage />
-              </PrivateRoute>
+              </ProtectedRoute>
             }
           />
+          
+          {/* Route cho user - quản lý file cá nhân */}
           <Route
-            path="/files"
+            path="/user/files"
             element={
-              <PrivateRoute>
-                <FileManager />
-              </PrivateRoute>
+              <ProtectedRoute requireUser={true}>
+                <FileUploadPage />
+              </ProtectedRoute>
             }
           />
+         
+          {/* Route cho admin - quản lý toàn bộ hệ thống */}
           <Route
             path="/admin"
             element={
-              <PrivateRoute>
+              <ProtectedRoute requireAdmin={true}>
                 <AdminPage />
-              </PrivateRoute>
+              </ProtectedRoute>
             }
           />
-          <Route path="/" element={<Navigate to="/chat" />} />
+          
+          {/* Route mặc định - chuyển hướng dựa trên role */}
+          <Route 
+            path="/" 
+            element={
+              <ProtectedRoute>
+                <RoleBasedRedirect />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Catch all route */}
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Router>
     </AuthProvider>

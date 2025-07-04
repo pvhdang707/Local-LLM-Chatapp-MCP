@@ -52,7 +52,8 @@ class ServerConfig:
 class OllamaConfig:
     Host = os.getenv("OLLAMA__HOST", "http://localhost:11434")
     EmbeddingModel = os.getenv("OLLAMA__EMBEDDING_MODEL", "nomic-embed-text")
-    RagModel = os.getenv("OLLAMA__RAG", "mistral")
+    # RagModel = os.getenv("OLLAMA__RAG", "mistral")
+    RagModel = os.getenv("OLLAMA__RAG", "phi")
 
 class FaissConfig:
     IndexPath = os.getenv("FAISS__INDEX_PATH", os.path.join(DATA_DIR, "index.bin"))

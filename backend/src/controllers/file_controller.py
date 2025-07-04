@@ -1,9 +1,10 @@
 from flask import Blueprint, request, jsonify, send_file
-from src.auth import require_auth
+from src.auth import require_auth, require_admin
 from src.file_manager import file_manager
 from src.file_classifier import file_classifier
 from src.cloud_integration import cloud_integration
 import os
+import json
 
 file_bp = Blueprint('file', __name__)
 
@@ -309,7 +310,8 @@ def get_user_files_enhanced():
             file_id = file_info['id']
             
             # Lấy thông tin phân loại
-            classification = file_classifier.get_file_classification(file_id)
+            # classification = file_classifier.get_file_classification(file_id)
+            classification = file_classifier.classify_file(file_id, file_info['original_name'])
             file_info['classification'] = classification
             
             # Lấy metadata từ cloud
@@ -348,16 +350,62 @@ def download_file(file_id):
     try:
         user_id = request.user['user_id']
         user_role = request.user.get('role', 'user')
+        
+        file_info = file_manager.get_file_by_id(file_id)
+        if not file_info:
+            return jsonify({'error': 'File không tồn tại'}), 404
+        
+        # Chỉ kiểm tra quyền nếu không phải admin
+        if user_role != 'admin' and str(file_info['uploaded_by']) != str(user_id):
+            return jsonify({'error': 'Không có quyền tải file này'}), 403
+            
+        file_path = file_manager.get_file_path(file_id)
+        
+        if not file_path or not os.path.exists(file_path):
+            return jsonify({'error': 'File không tồn tại trên server'}), 404
+            
+        return send_file(file_path, as_attachment=True)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@file_bp.route('/user/files/<file_id>', methods=['DELETE'])
+@require_auth
+def delete_file(file_id):
+    """
+    Xóa file của user (admin xóa được mọi file)
+    ---
+    tags:
+      - File
+    parameters:
+      - name: file_id
+        in: path
+        type: string
+        required: true
+        description: ID file
+    responses:
+      200:
+        description: Xóa file thành công
+      403:
+        description: Không có quyền xóa file
+      404:
+        description: File không tồn tại
+    """
+    try:
+        user_id = request.user['user_id']
+        user_role = request.user.get('role', 'user')
         file_info = file_manager.get_file_by_id(file_id)
         if not file_info:
             return jsonify({'error': 'File không tồn tại'}), 404
         # Chỉ kiểm tra quyền nếu không phải admin
-        if user_role != 'admin' and file_info['user_id'] != user_id:
-            return jsonify({'error': 'Không có quyền tải file này'}), 403
-        file_path = file_manager.get_file_path(file_id)
-        if not file_path or not os.path.exists(file_path):
-            return jsonify({'error': 'File không tồn tại trên server'}), 404
-        return send_file(file_path, as_attachment=True)
+        if user_role != 'admin' and file_info['uploaded_by'] != user_id:
+            return jsonify({'error': 'Không có quyền xóa file này'}), 403
+        
+        result = file_manager.delete_file(file_id)
+        if result['success']:
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+            
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -394,7 +442,7 @@ def classify_file(file_id):
         if not file_info:
             return jsonify({'error': 'File không tồn tại'}), 404
             
-        if user_role != 'admin' and file_info['user_id'] != user_id:
+        if user_role != 'admin' and file_info['uploaded_by'] != user_id:
             return jsonify({'error': 'Không có quyền truy cập file này'}), 403
         
         # Thực hiện phân loại
@@ -433,7 +481,9 @@ def classify_files_batch():
                 })
                 continue
                 
-            if file_info['user_id'] != user_id:
+            # Admin có thể truy cập tất cả files
+            user_role = request.user.get('role', 'user')
+            if user_role != 'admin' and file_info['uploaded_by'] != user_id:
                 results.append({
                     'file_id': file_id,
                     'success': False,
@@ -493,7 +543,7 @@ def get_file_metadata(file_id):
         file_info = file_manager.get_file_by_id(file_id)
         if not file_info:
             return jsonify({'error': 'File không tồn tại'}), 404
-        if user_role != 'admin' and file_info['user_id'] != user_id:
+        if user_role != 'admin' and file_info['uploaded_by'] != user_id:
             return jsonify({'error': 'Không có quyền truy cập file này'}), 403
         metadata = cloud_integration.get_file_metadata(file_id)
         return jsonify({'metadata': metadata})
@@ -525,7 +575,9 @@ def send_metadata_batch():
                 })
                 continue
                 
-            if file_info['user_id'] != user_id:
+            # Admin có thể truy cập tất cả files
+            user_role = request.user.get('role', 'user')
+            if user_role != 'admin' and file_info['uploaded_by'] != user_id:
                 results.append({
                     'file_id': file_id,
                     'success': False,
@@ -540,5 +592,74 @@ def send_metadata_batch():
         
         return jsonify({'results': results})
         
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@file_bp.route('/admin/upload_file', methods=['POST'])
+@require_auth
+@require_admin
+def admin_upload_file():
+    """
+    Admin upload file với phân quyền
+    ---
+    tags:
+      - File
+    consumes:
+      - multipart/form-data
+    parameters:
+      - name: Authorization
+        in: header
+        type: string
+        required: true
+        description: Bearer token (JWT) - Admin only
+      - name: file
+        in: formData
+        type: file
+        required: true
+        description: File cần upload
+      - name: permissions
+        in: formData
+        type: string
+        required: false
+        description: JSON string chứa danh sách user_id được phép truy cập
+    responses:
+      201:
+        description: Upload file thành công
+      400:
+        description: Dữ liệu không hợp lệ
+      401:
+        description: Không xác thực
+      403:
+        description: Không phải admin
+      500:
+        description: Lỗi server
+    """
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'Không có file được chọn'}), 400
+            
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'Không có file được chọn'}), 400
+        
+        # Lấy danh sách user được phép truy cập
+        permissions = request.form.get('permissions', '[]')
+        try:
+            allowed_users = json.loads(permissions)
+        except json.JSONDecodeError:
+            allowed_users = []
+        
+        # Upload file với thông tin phân quyền
+        result = file_manager.add_file_with_permissions(
+            file=file,
+            uploaded_by=request.user['user_id'],
+            allowed_users=allowed_users
+        )
+        
+        if result['success']:
+            return jsonify(result), 201
+        else:
+            return jsonify(result), 400
+            
     except Exception as e:
         return jsonify({'error': str(e)}), 500 
