@@ -146,19 +146,7 @@ const AdminPage = () => {
     }
   };
 
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-gray-100">
-        <Navbar />
-        <div className="container mx-auto p-4">
-          <div className="bg-white rounded-lg shadow-md p-6 text-center">
-            <h2 className="text-2xl font-bold text-red-500 mb-4">Truy cập bị từ chối</h2>
-            <p>Bạn không có quyền truy cập trang này. Chỉ tài khoản Admin mới có thể truy cập.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+ 
 
   return (
     <div className="min-h-screen bg-gray-100">

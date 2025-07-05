@@ -1,36 +1,64 @@
 import React from 'react';
-import { SparklesIcon } from '@heroicons/react/24/outline';
 
-const Welcome = () => {
+const Welcome = ({ onCreateNewChat }) => {
+  
+
+  const examples = [
+    {
+      title: "Tìm kiếm thông tin",
+      description: "Tìm kiếm và phân tích thông tin từ các file đã upload"
+    },
+    {
+      title: "Phân loại tài liệu", 
+      description: "Phân loại và tổ chức các tài liệu theo chủ đề"
+    },
+    {
+      title: "Tóm tắt nội dung",
+      description: "Tóm tắt các tài liệu dài thành các điểm chính"
+    }
+  ];
+
   return (
-    <div className="flex h-[calc(100vh-200px)] w-full flex-col items-center justify-center p-4 text-center">
-      <div className="mb-8 rounded-full bg-blue-100 p-4 dark:bg-blue-900">
-        <SparklesIcon className="h-12 w-12 text-blue-500 dark:text-blue-400" />
+    <div className="flex h-full w-full flex-col items-center justify-center p-8 text-center">
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          Local LLM Chat
+        </h1>
+        <p className="text-lg text-gray-600 max-w-2xl">
+          Hệ thống chat AI mạnh mẽ với khả năng tìm kiếm và phân tích tài liệu. 
+          Bắt đầu cuộc trò chuyện mới để khám phá các tính năng.
+        </p>
       </div>
-      <h2 className="mb-4 text-2xl font-bold text-gray-800 dark:text-white">
-        Chào mừng đến với Local LLM Chat
-      </h2>
-      <p className="max-w-md text-gray-600 dark:text-gray-300">
-        Bắt đầu cuộc trò chuyện mới bằng cách nhập tin nhắn của bạn vào ô bên dưới.
-        Tôi sẽ giúp bạn trả lời các câu hỏi và thảo luận về mọi chủ đề.
-      </p>
-      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-          <h3 className="mb-2 font-semibold text-gray-800 dark:text-white">
-            💡 Gợi ý
-          </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            Bạn có thể hỏi tôi về bất kỳ chủ đề nào, từ lập trình đến khoa học, văn học và nhiều hơn nữa.
-          </p>
+
+      {/* Nút tạo chat mới */}
+      {onCreateNewChat && (
+        <button
+          onClick={onCreateNewChat}
+          className="mb-8 px-8 py-4 bg-blue-600 text-white text-lg font-semibold rounded-xl shadow-lg hover:bg-blue-700 transition-all duration-200"
+        >
+          + Tạo cuộc trò chuyện mới
+        </button>
+      )}
+
+      {/* Examples */}
+      <div className="w-full max-w-4xl">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Tính năng chính</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {examples.map((example, index) => (
+            <div
+              key={index}
+              className="p-4 border border-gray-200 rounded-lg bg-gray-50"
+            >
+              <h3 className="font-semibold text-gray-900 mb-2">{example.title}</h3>
+              <p className="text-sm text-gray-600">{example.description}</p>
+            </div>
+          ))}
         </div>
-        <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-          <h3 className="mb-2 font-semibold text-gray-800 dark:text-white">
-            ⚡ Tính năng
-          </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            Hỗ trợ tra cứu, tìm kiếm thông tin, và nhiều tính năng hữu ích khác liên quan có trong kho tài liệu.
-          </p>
-        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="mt-8 text-sm text-gray-500">
+        <p>Local LLM Chat có thể tạo ra thông tin không chính xác.</p>
       </div>
     </div>
   );

@@ -1,23 +1,39 @@
 import React from 'react';
+import ChatMessage from './ChatMessage';
 
-const Message = ({ text, isUser, timestamp }) => {
-  const formattedTime = new Date(timestamp).toLocaleTimeString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+const Message = ({ message, onDownload }) => {
+  if (!message) return null;
+  const { sender, text, timestamp, enhanced, mode } = message;
+  const isUser = sender === 'user';
+  // Avatar: chữ cái đầu hoặc icon
+  const avatar = isUser
+    ? <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-base shadow">U</div>
+    : <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 font-bold text-base shadow">🤖</div>;
 
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div
-        className={`max-w-[70%] rounded-lg p-4 ${
-          isUser
-            ? 'bg-blue-500 text-white'
-            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-        }`}
-      >
-        <p className="text-sm">{text}</p>
-        <span className="mt-1 block text-xs opacity-70">{formattedTime}</span>
+    <div className={`flex w-full mb-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
+      {/* Avatar */}
+      {!isUser && <div className="mr-2 flex-shrink-0 flex items-end">{avatar}</div>}
+      <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[75%]`}>
+        <ChatMessage 
+          isUser={isUser} 
+          message={text} 
+          enhanced={enhanced}
+          onDownload={onDownload}
+        />
+        <div className={`text-[11px] text-gray-400 select-none pt-1 ${isUser ? 'text-right pr-2' : 'text-left pl-2'}`}>
+          <div className="flex items-center space-x-2">
+            <span>{timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+            {mode === 'enhanced' && !isUser && (
+              <span className="inline-flex items-center px-1 py-0.5 rounded text-xs bg-green-100 text-green-800">
+                🔍 Enhanced
+              </span>
+            )}
+          </div>
+        </div>
       </div>
+      {/* Avatar user */}
+      {isUser && <div className="ml-2 flex-shrink-0 flex items-end">{avatar}</div>}
     </div>
   );
 };

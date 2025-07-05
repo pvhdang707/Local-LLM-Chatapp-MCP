@@ -18,7 +18,7 @@ const Navbar = () => {
 
   return (
     <nav className="bg-white shadow-lg border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="  container mx-auto p-4">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/chat" className="flex items-center space-x-2">
@@ -29,22 +29,22 @@ const Navbar = () => {
             </Link>
             
             <div className="ml-10 flex items-center space-x-8">
-              <Link 
+              {/* <Link 
                 to="/chat" 
                 className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 💬 Chat
-              </Link>
+              </Link> */}
               
               {/* Menu cho user thường */}
-              {!isAdmin && (
+              {/* {!isAdmin && (
                 <Link 
                   to="/user/files" 
                   className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   📁 Quản lý File
                 </Link>
-              )}
+              )} */}
               
               {/* Menu cho admin */}
               {isAdmin && (

@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import Navbar from '../components/Navbar';
 import FileManager from '../components/FileManager';
 import FileUploadModal from '../components/FileUploadModal';
 import { useAuth } from '../contexts/AuthContext';
 import Toast from '../components/Toast';
 
-const FileUploadPage = () => {
+const FileUploadPage = ({ embedded = false }) => {
   const { user, isAdmin } = useAuth();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -31,60 +30,48 @@ const FileUploadPage = () => {
   // Kiểm tra quyền truy cập
   if (isAdmin) {
     return (
-      <div className="min-h-screen bg-gray-100">
-        <Navbar />
-        <div className="container mx-auto p-4">
-          <div className="bg-white rounded-lg shadow-md p-6 text-center">
-            <h2 className="text-2xl font-bold text-blue-500 mb-4">Trang quản lý file</h2>
-            <p className="text-gray-600 mb-4">Trang này chỉ dành cho người dùng thường.</p>
-            <p className="text-gray-500">Admin vui lòng sử dụng trang Quản trị viên để quản lý toàn bộ hệ thống.</p>
-          </div>
+      <div className="flex flex-col items-center justify-center h-full p-8">
+        <div className="bg-white rounded-xl shadow-md p-8 text-center max-w-lg w-full">
+          <h2 className="text-xl font-bold text-blue-500 mb-2">Trang quản lý file</h2>
+          <p className="text-gray-600 mb-2">Trang này chỉ dành cho người dùng thường.</p>
+          <p className="text-gray-500">Admin vui lòng sử dụng trang Quản trị viên để quản lý toàn bộ hệ thống.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
+    <div className={`flex flex-col h-full w-full bg-white`}>
       <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'success' })} />
       
-      <div className="container mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Quản lý File
-          </h1>
-          <p className="text-gray-600">
-            Upload, phân loại và quản lý tài liệu với AI
-          </p>
-        </div>
+      <div className="container mx-4 py-6">
+        
 
         {/* Main Content */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className=" rounded-xl shadow-sm ">
           {/* Header với Upload Button */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-100">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Danh sách File</h2>
-              <p className="text-sm text-gray-500 mt-1">Quản lý tất cả file đã upload</p>
-            </div>
+          <div className="flex items-center justify-between px-6 ">
+            
             <button
               onClick={() => setIsUploadModalOpen(true)}
               className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
             >
-              <span>📤</span>
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 17v1a2 2 0 002 2h12a2 2 0 002-2v-1" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 10l5-5m0 0l5 5m-5-5v12" />
+              </svg>
               <span>Upload File</span>
             </button>
           </div>
 
           {/* File Manager Content */}
-          <div className="p-6">
+          <div className="p-6 w-full">
             <FileManager key={refreshTrigger} onAction={handleFileAction} />
           </div>
         </div>
 
         {/* Quick Info */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-8">
           <div className="flex items-start space-x-3">
             <div className="text-blue-600 mt-0.5">💡</div>
             <div className="text-sm text-blue-800">

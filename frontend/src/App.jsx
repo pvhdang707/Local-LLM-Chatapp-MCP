@@ -6,6 +6,9 @@ import AdminPage from './pages/AdminPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import FileUploadPage from './pages/FileUploadPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import { ChatSessionProvider } from './contexts/ChatSessionContext';
+import { EnhancedChatProvider } from './contexts/EnhancedChatContext';
+import './components/EnhancedChat.css';
 
 // Component để chuyển hướng dựa trên role
 const RoleBasedRedirect = () => {
@@ -26,60 +29,64 @@ const RoleBasedRedirect = () => {
   if (isAdmin) {
     return <Navigate to="/admin" replace />;
   } else {
-    return <Navigate to="/user/files" replace />;
+    return <Navigate to="/chat" replace />;
   }
 };
 
 const App = () => {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          
-          <Route
-            path="/chat"
-            element={
-              <ProtectedRoute>
-                <ChatPage />
-              </ProtectedRoute>
-            }
-          />
-          
-          {/* Route cho user - quản lý file cá nhân */}
-          <Route
-            path="/user/files"
-            element={
-              <ProtectedRoute requireUser={true}>
-                <FileUploadPage />
-              </ProtectedRoute>
-            }
-          />
-         
-          {/* Route cho admin - quản lý toàn bộ hệ thống */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute requireAdmin={true}>
-                <AdminPage />
-              </ProtectedRoute>
-            }
-          />
-          
-          {/* Route mặc định - chuyển hướng dựa trên role */}
-          <Route 
-            path="/" 
-            element={
-              <ProtectedRoute>
-                <RoleBasedRedirect />
-              </ProtectedRoute>
-            } 
-          />
-          
-          {/* Catch all route */}
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </Router>
+      <EnhancedChatProvider>
+        <ChatSessionProvider>
+          <Router>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              
+              <Route
+                path="/chat"
+                element={
+                  <ProtectedRoute>
+                    <ChatPage />
+                  </ProtectedRoute>
+                }
+              />
+              
+              {/* Route cho user - quản lý file cá nhân */}
+              <Route
+                path="/user/files"
+                element={
+                  <ProtectedRoute requireUser={true}>
+                    <FileUploadPage />
+                  </ProtectedRoute>
+                }
+              />
+             
+              {/* Route cho admin - quản lý toàn bộ hệ thống */}
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <AdminPage />
+                  </ProtectedRoute>
+                }
+              />
+              
+              {/* Route mặc định - chuyển hướng dựa trên role */}
+              <Route 
+                path="/" 
+                element={
+                  <ProtectedRoute>
+                    <RoleBasedRedirect />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Catch all route */}
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+          </Router>
+        </ChatSessionProvider>
+      </EnhancedChatProvider>
     </AuthProvider>
   );
 };
