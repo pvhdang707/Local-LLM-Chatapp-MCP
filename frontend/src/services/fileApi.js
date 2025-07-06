@@ -87,6 +87,54 @@ export const uploadFile = async (file) => {
   }
 };
 
+// Upload nhiều file cùng lúc
+export const uploadFilesBatch = async (files) => {
+  try {
+    // Validate tất cả files trước khi upload
+    const validationResults = files.map(file => ({
+      file,
+      validation: validateFile(file)
+    }));
+
+    const invalidFiles = validationResults.filter(result => !result.validation.isValid);
+    if (invalidFiles.length > 0) {
+      const errors = invalidFiles.map(result => 
+        `${result.file.name}: ${result.validation.errors.join(', ')}`
+      );
+      throw new Error(errors.join('; '));
+    }
+
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('files', file);
+    });
+
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('Chưa đăng nhập');
+    }
+
+    const response = await fetch(`${API_URL}/user/files/batch`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Có lỗi xảy ra khi upload files');
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error uploading files batch:', error);
+    throw error;
+  }
+};
+
 // Lấy danh sách file của user
 export const getUserFiles = async () => {
   try {

@@ -6,6 +6,7 @@ import AdminPage from './pages/AdminPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import FileUploadPage from './pages/FileUploadPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import PublicRoute from './components/PublicRoute';
 import { ChatSessionProvider } from './contexts/ChatSessionContext';
 import { EnhancedChatProvider } from './contexts/EnhancedChatContext';
 import './components/EnhancedChat.css';
@@ -40,7 +41,14 @@ const App = () => {
         <ChatSessionProvider>
           <Router>
             <Routes>
-              <Route path="/login" element={<Login />} />
+              <Route 
+                path="/login" 
+                element={
+                  <PublicRoute>
+                    <Login />
+                  </PublicRoute>
+                } 
+              />
               
               <Route
                 path="/chat"

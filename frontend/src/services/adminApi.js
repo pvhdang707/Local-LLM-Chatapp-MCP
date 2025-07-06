@@ -69,6 +69,27 @@ export const adminApi = {
     return await response.json();
   },
 
+  // Upload nhiều file với phân quyền
+  uploadFilesBatchWithPermissions: async (formData) => {
+    const token = localStorage.getItem('token');
+    const url = `${API_URL}/admin/upload_files_batch`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return await response.json();
+  },
+
   // Xóa file
   deleteFile: async (fileId) => {
     return apiCall(`/user/files/${fileId}`, 'DELETE');

@@ -23,7 +23,9 @@ const FileManagementTab = ({
   setUploadFile,
   uploadPermissions,
   setUploadPermissions,
-  loadFiles
+  loadFiles,
+  selectedFiles,
+  setSelectedFiles
 }) => {
 
 
@@ -70,7 +72,9 @@ const FileManagementTab = ({
   // Upload file
   const handleUploadFile = async (e) => {
     e.preventDefault();
-    if (!uploadFile) {
+    
+    // Kiểm tra file đã chọn
+    if (!uploadFile && selectedFiles.length === 0) {
       alert('Vui lòng chọn file để upload');
       return;
     }
@@ -78,15 +82,49 @@ const FileManagementTab = ({
     setLoading(true);
     try {
       const formData = new FormData();
-      formData.append('file', uploadFile);
+      
+      // Xác định chế độ upload dựa trên file nào được chọn
+      const isSingleUpload = uploadFile && selectedFiles.length === 0;
+      const isMultipleUpload = selectedFiles.length > 0;
+      
+      if (isSingleUpload) {
+        // Upload đơn file
+        formData.append('file', uploadFile);
+      } else if (isMultipleUpload) {
+        // Upload nhiều file
+        selectedFiles.forEach(file => {
+          formData.append('files', file);
+        });
+      }
+      
       formData.append('permissions', JSON.stringify(uploadPermissions));
       
-      await adminApi.uploadFileWithPermissions(formData);
+      // Gọi API tương ứng
+      let result;
+      if (isSingleUpload) {
+        result = await adminApi.uploadFileWithPermissions(formData);
+      } else {
+        result = await adminApi.uploadFilesBatchWithPermissions(formData);
+      }
+      
+      // Reset form
       setUploadFile(null);
+      setSelectedFiles([]);
       setUploadPermissions([]);
       setShowUploadModal(false);
+      
+      // Reload danh sách file
       loadFiles();
-      setNotification({ message: 'Upload file thành công!', type: 'success' });
+      
+      // Hiển thị thông báo
+      if (result.success) {
+        const message = isSingleUpload 
+          ? 'Upload file thành công!' 
+          : `Upload thành công ${result.files?.length || 0} file(s)!`;
+        setNotification({ message, type: 'success' });
+      } else {
+        setNotification({ message: 'Upload thất bại, vui lòng thử lại.', type: 'error' });
+      }
     } catch (err) {
       console.error('Lỗi khi upload file:', err);
       setNotification({ message: 'Upload thất bại, vui lòng thử lại.', type: 'error' });
@@ -161,8 +199,6 @@ const FileManagementTab = ({
         isOpen={showUploadModal}
         onClose={() => {
           setShowUploadModal(false);
-          setUploadFile(null);
-          setUploadPermissions([]);
         }}
         onSubmit={handleUploadFile}
         users={users}
@@ -170,6 +206,8 @@ const FileManagementTab = ({
         setUploadFile={setUploadFile}
         uploadPermissions={uploadPermissions}
         setUploadPermissions={setUploadPermissions}
+        selectedFiles={selectedFiles}
+        setSelectedFiles={setSelectedFiles}
       />
     </div>
   );

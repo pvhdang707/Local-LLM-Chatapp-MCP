@@ -41,50 +41,56 @@ const FileUploadPage = ({ embedded = false }) => {
   }
 
   return (
-    <div className={`flex flex-col h-full w-full bg-white`}>
+    <div className={`flex flex-col h-[100vh] w-full bg-gray-50`}>
       <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'success' })} />
       
-      <div className="container mx-4 py-6">
-        
-
-        {/* Main Content */}
-        <div className=" rounded-xl shadow-sm ">
-          {/* Header với Upload Button */}
-          <div className="flex items-center justify-between px-6 ">
-            
+      <div className="flex flex-col h-full">
+        {/* Header với Upload Button - Fixed at top */}
+        <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg sm:text-xl font-semibold text-gray-900">Quản lý File</h1>
             <button
               onClick={() => setIsUploadModalOpen(true)}
-              className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
+              className="inline-flex items-center space-x-1 sm:space-x-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm text-sm sm:text-base"
             >
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 17v1a2 2 0 002 2h12a2 2 0 002-2v-1" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 10l5-5m0 0l5 5m-5-5v12" />
               </svg>
-              <span>Upload File</span>
+              <span className="hidden sm:inline">Upload File</span>
+              <span className="sm:hidden">Upload</span>
             </button>
-          </div>
-
-          {/* File Manager Content */}
-          <div className="p-6 w-full">
-            <FileManager key={refreshTrigger} onAction={handleFileAction} />
           </div>
         </div>
 
-        {/* Quick Info */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-8">
+        {/* Main Content Area - Scrollable */}
+        <div className="flex-1 overflow-hidden">
+          <div className="h-full p-3 sm:p-6">
+            <div className="bg-white rounded-xl shadow-sm h-full flex flex-col">
+              {/* File Manager Content */}
+              <div className="flex-1 p-3 sm:p-6 overflow-hidden">
+                <FileManager key={refreshTrigger} onAction={handleFileAction} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Info - Fixed at bottom */}
+        {/* <div className="bg-blue-50 border-t border-blue-200 px-4 sm:px-6 py-4 flex-shrink-0">
           <div className="flex items-start space-x-3">
             <div className="text-blue-600 mt-0.5">💡</div>
-            <div className="text-sm text-blue-800">
+            <div className="text-xs sm:text-sm text-blue-800">
               <p className="font-medium mb-1">Hướng dẫn nhanh:</p>
               <ul className="space-y-1 text-blue-700">
-                <li>• Click "Upload File" để thêm file mới</li>
+                <li className="hidden sm:list-item">• Click "Upload File" để thêm file mới</li>
+                <li className="sm:hidden">• Click "Upload" để thêm file mới</li>
                 <li>• Sử dụng thanh tìm kiếm để tìm file</li>
                 <li>• Lọc theo nhóm phân loại AI</li>
                 <li>• File sẽ được tự động phân loại</li>
               </ul>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Upload Modal */}

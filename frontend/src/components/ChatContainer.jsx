@@ -265,9 +265,8 @@ const ChatContainer = () => {
       {/* Main Content - Right */}
       <div className="flex-1 flex flex-col bg-white items-center ">
         {/* Top Bar */}
-        <div className=" h-16 border-b border-gray-200 flex items-center justify-between px-4 md:px-6 bg-white w-full max-w-5xl mx-auto">
-          <div className="flex items-center gap-3">
-            {/* Nút mở sidebar cho mobile */}
+        {/* <div className=" h-16 border-b border-gray-200 flex items-center justify-between px-4 md:px-6 bg-white w-full max-w-5xl mx-auto">
+          {/* <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="md:hidden p-2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
@@ -285,8 +284,8 @@ const ChatContainer = () => {
               {activeTab === 'files' && 'Quản lý File'}
               {activeTab === 'admin' && 'Quản trị viên'}
             </h1>
-          </div>
-        </div>
+          </div> *
+        </div> */}
 
         {/* Main Content Area */}
         <div className="flex-1 w-full flex flex-col items-center overflow-hidden ">

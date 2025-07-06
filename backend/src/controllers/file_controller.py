@@ -662,4 +662,215 @@ def admin_upload_file():
             return jsonify(result), 400
             
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@file_bp.route('/user/files/batch', methods=['POST'])
+@require_auth
+def user_upload_files_batch():
+    """
+    Upload nhiều file cùng lúc cho user hiện tại
+    ---
+    tags:
+      - File
+    consumes:
+      - multipart/form-data
+    parameters:
+      - name: Authorization
+        in: header
+        type: string
+        required: true
+        description: Bearer token (JWT)
+      - name: files
+        in: formData
+        type: file
+        required: true
+        description: Danh sách files cần upload (multiple)
+    responses:
+      201:
+        description: Upload files thành công
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            message:
+              type: string
+              example: "Upload files thành công"
+            files:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  original_name:
+                    type: string
+                  file_type:
+                    type: string
+                  file_size:
+                    type: integer
+                  uploaded_by:
+                    type: string
+                  uploaded_at:
+                    type: string
+            failed_files:
+              type: array
+              items:
+                type: object
+                properties:
+                  original_name:
+                    type: string
+                  error:
+                    type: string
+      400:
+        description: Dữ liệu không hợp lệ
+      401:
+        description: Không xác thực
+      413:
+        description: Files quá lớn
+      500:
+        description: Lỗi server
+    """
+    try:
+        if 'files' not in request.files:
+            return jsonify({'error': 'Không có files được chọn'}), 400
+            
+        files = request.files.getlist('files')
+        if not files or all(file.filename == '' for file in files):
+            return jsonify({'error': 'Không có files được chọn'}), 400
+            
+        user_id = request.user['user_id']
+        successful_files = []
+        failed_files = []
+        
+        for file in files:
+            if file.filename == '':
+                continue
+                
+            try:
+                result = file_manager.add_file(file, user_id)
+                if result['success']:
+                    successful_files.append(result['file'])
+                else:
+                    failed_files.append({
+                        'original_name': file.filename,
+                        'error': result.get('message', 'Lỗi không xác định')
+                    })
+            except Exception as e:
+                failed_files.append({
+                    'original_name': file.filename,
+                    'error': str(e)
+                })
+        
+        response_data = {
+            'success': len(successful_files) > 0,
+            'message': f'Upload thành công {len(successful_files)} file(s)',
+            'files': successful_files,
+            'failed_files': failed_files
+        }
+        
+        if successful_files:
+            return jsonify(response_data), 201
+        else:
+            return jsonify(response_data), 400
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@file_bp.route('/admin/upload_files_batch', methods=['POST'])
+@require_auth
+@require_admin
+def admin_upload_files_batch():
+    """
+    Admin upload nhiều file cùng lúc với phân quyền
+    ---
+    tags:
+      - File
+    consumes:
+      - multipart/form-data
+    parameters:
+      - name: Authorization
+        in: header
+        type: string
+        required: true
+        description: Bearer token (JWT) - Admin only
+      - name: files
+        in: formData
+        type: file
+        required: true
+        description: Danh sách files cần upload (multiple)
+      - name: permissions
+        in: formData
+        type: string
+        required: false
+        description: JSON string chứa danh sách user_id được phép truy cập
+    responses:
+      201:
+        description: Upload files thành công
+      400:
+        description: Dữ liệu không hợp lệ
+      401:
+        description: Không xác thực
+      403:
+        description: Không phải admin
+      500:
+        description: Lỗi server
+    """
+    try:
+        if 'files' not in request.files:
+            return jsonify({'error': 'Không có files được chọn'}), 400
+            
+        files = request.files.getlist('files')
+        if not files or all(file.filename == '' for file in files):
+            return jsonify({'error': 'Không có files được chọn'}), 400
+        
+        # Lấy danh sách user được phép truy cập
+        permissions = request.form.get('permissions', '[]')
+        try:
+            allowed_users = json.loads(permissions)
+        except json.JSONDecodeError:
+            allowed_users = []
+        
+        successful_files = []
+        failed_files = []
+        
+        for file in files:
+            if file.filename == '':
+                continue
+                
+            try:
+                # Upload file với thông tin phân quyền
+                result = file_manager.add_file_with_permissions(
+                    file=file,
+                    uploaded_by=request.user['user_id'],
+                    allowed_users=allowed_users
+                )
+                
+                if result['success']:
+                    successful_files.append(result['file'])
+                else:
+                    failed_files.append({
+                        'original_name': file.filename,
+                        'error': result.get('message', 'Lỗi không xác định')
+                    })
+            except Exception as e:
+                failed_files.append({
+                    'original_name': file.filename,
+                    'error': str(e)
+                })
+        
+        response_data = {
+            'success': len(successful_files) > 0,
+            'message': f'Upload thành công {len(successful_files)} file(s)',
+            'files': successful_files,
+            'failed_files': failed_files
+        }
+        
+        if successful_files:
+            return jsonify(response_data), 201
+        else:
+            return jsonify(response_data), 400
+            
+    except Exception as e:
         return jsonify({'error': str(e)}), 500 

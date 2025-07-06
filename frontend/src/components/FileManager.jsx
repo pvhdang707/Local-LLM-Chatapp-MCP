@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   getUserFilesEnhanced, 
   deleteFile, 
@@ -50,6 +51,7 @@ const ICONS = {
 };
 
 const FileManager = ({ onAction }) => {
+  const { user } = useAuth();
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -207,10 +209,28 @@ const FileManager = ({ onAction }) => {
     );
   }
 
+  // Kiểm tra authentication - nếu chưa đăng nhập thì hiển thị thông báo
+  if (!user) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-6xl mb-4">🔒</div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">Yêu cầu đăng nhập</h3>
+        <p className="text-gray-600 mb-4">
+          Bạn cần đăng nhập để có thể quản lý files. Vui lòng đăng nhập và thử lại.
+        </p>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
+          <p className="text-sm text-blue-800">
+            💡 <strong>Lưu ý:</strong> Chỉ người dùng đã đăng nhập mới có thể upload và quản lý files.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      {/* Search and Filter */}
-      <div className="space-y-3">
+    <div className="flex flex-col h-full">
+      {/* Search and Filter - Fixed at top */}
+      <div className="space-y-3 mb-4 flex-shrink-0">
         {/* Search Bar */}
         <div className="relative">
           <input
@@ -218,7 +238,7 @@ const FileManager = ({ onAction }) => {
             placeholder="Tìm kiếm file..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 py-2 pl-10 pr-10  border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            className="w-full px-3 py-2 pl-10 pr-10 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder:text-xs sm:placeholder:text-sm"
           />
           <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
             {ICONS.search}
@@ -235,10 +255,10 @@ const FileManager = ({ onAction }) => {
         </div>
 
         {/* Group Filter */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1 sm:gap-2">
           <button
             onClick={() => setSelectedGroup('all')}
-            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+            className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium transition-colors ${
               selectedGroup === 'all'
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -250,56 +270,74 @@ const FileManager = ({ onAction }) => {
             <button
               key={group.group_id}
               onClick={() => setSelectedGroup(group.group_id)}
-              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+              className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium transition-colors ${
                 selectedGroup === group.group_id
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
-              {group.name} ({files.filter(f => f.classification?.group_id === group.group_id).length})
+              <span className="hidden sm:inline">{group.name}</span>
+              <span className="sm:hidden">{group.name.split(' ')[0]}</span>
+              ({files.filter(f => f.classification?.group_id === group.group_id).length})
             </button>
           ))}
         </div>
       </div>
 
-      {/* Files List */}
-      {filteredFiles.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          {ICONS.folder}
-          <p className="text-lg font-medium mb-1">
-            {selectedGroup === 'all' ? 'Chưa có file nào' : 'Không có file trong nhóm này'}
-          </p>
-          <p className="text-sm">
-            {searchTerm ? 'Thử tìm kiếm với từ khóa khác' : 'Hãy upload file đầu tiên của bạn!'}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filteredFiles.map(file => (
-            <div key={file.id} className=" rounded-lg p-4 hover:bg-gray-100 transition-colors border border-gray-200">
-              <div className="flex items-start justify-between">
-                {/* File Info */}
-                <div className="flex items-start space-x-3 flex-1">
-                  <div className="text-2xl">{getFileIcon(file.original_name)}</div>
+      {/* Files List - Scrollable area */}
+      <div className="flex-1 overflow-hidden">
+        {filteredFiles.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            {ICONS.folder}
+            <p className="text-lg font-medium mb-1">
+              {selectedGroup === 'all' ? 'Chưa có file nào' : 'Không có file trong nhóm này'}
+            </p>
+            <p className="text-sm">
+              {searchTerm ? 'Thử tìm kiếm với từ khóa khác' : 'Hãy upload file đầu tiên của bạn!'}
+            </p>
+          </div>
+        ) : (
+          <div className="h-full overflow-y-auto pr-2 space-y-3 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
+            {filteredFiles.map(file => (
+              <div key={file.id} className="rounded-lg p-4 hover:bg-gray-100 transition-colors border border-gray-200 bg-white">
+                <div className="flex items-start gap-3">
+                  {/* File Icon */}
+                  <div className="flex-shrink-0 text-2xl mt-1">
+                    {getFileIcon(file.original_name)}
+                  </div>
                   
+                  {/* File Info - Flexible width */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-gray-900 truncate">
-                      {file.original_name}
-                    </h3>
+                    {/* File name with tooltip for long names */}
+                    <div className="group relative">
+                      <h3 className="font-medium text-gray-900 truncate pr-2 text-sm sm:text-base">
+                        {file.original_name}
+                      </h3>
+                      {/* Tooltip for long file names */}
+                      {file.original_name.length > 50 && (
+                        <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 max-w-xs break-words hidden sm:block">
+                          {file.original_name}
+                          <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                        </div>
+                      )}
+                    </div>
                     
-                    <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500">
-                      <span>{formatFileSize(file.file_size)}</span>
-                      <span>•</span>
-                      <span>{formatDate(file.uploaded_at)}</span>
+                    {/* File metadata */}
+                    <div className="mt-1 flex items-center space-x-2 sm:space-x-4 text-xs sm:text-sm text-gray-500">
+                      <span className="flex-shrink-0">{formatFileSize(file.file_size)}</span>
+                      <span className="flex-shrink-0 hidden sm:inline">•</span>
+                      <span className="flex-shrink-0 hidden sm:inline">{formatDate(file.uploaded_at)}</span>
+                      <span className="flex-shrink-0 sm:hidden">{formatDate(file.uploaded_at).split(' ')[0]}</span>
                     </div>
 
                     {/* Classification */}
                     {file.classification && (
-                      <div className="mt-2 flex items-center space-x-2">
-                        <span className={`px-2 py-1 text-xs rounded-full border ${getGroupColor(file.classification.group_id)}`}>
-                          Nhóm {file.classification.group_id}: {file.classification.group_name}
+                      <div className="mt-2 flex items-center space-x-2 flex-wrap">
+                        <span className={`px-2 py-1 text-xs rounded-full border ${getGroupColor(file.classification.group_id)} flex-shrink-0`}>
+                          <span className="hidden sm:inline">Nhóm {file.classification.group_id}: {file.classification.group_name}</span>
+                          <span className="sm:hidden">Nhóm {file.classification.group_id}</span>
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 flex-shrink-0">
                           ({Math.round(file.classification.confidence * 100)}%)
                         </span>
                       </div>
@@ -312,42 +350,42 @@ const FileManager = ({ onAction }) => {
                       </div>
                     )}
                   </div>
-                </div>
 
-                {/* Actions */}
-                <div className="flex items-center space-x-2 ml-4">
-                  <button
-                    onClick={() => handleDownloadFile(file.id)}
-                    disabled={downloadingFile === file.id}
-                    className="p-2 text-green-600 hover:bg-green-100 rounded transition-colors disabled:opacity-50"
-                    title="Tải xuống file"
-                  >
-                    {downloadingFile === file.id ? ICONS.spinner : ICONS.download}
-                  </button>
-                  
-                  <button
-                    onClick={() => handleDeleteFile(file.id)}
-                    disabled={deletingFile === file.id}
-                    className="p-2 text-red-600 hover:bg-red-100 rounded transition-colors disabled:opacity-50"
-                    title="Xóa file"
-                  >
-                    {deletingFile === file.id ? ICONS.spinner : ICONS.trash}
-                  </button>
+                  {/* Actions - Fixed width */}
+                  <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+                    <button
+                      onClick={() => handleDownloadFile(file.id)}
+                      disabled={downloadingFile === file.id}
+                      className="p-1.5 sm:p-2 text-green-600 hover:bg-green-100 rounded transition-colors disabled:opacity-50"
+                      title="Tải xuống file"
+                    >
+                      {downloadingFile === file.id ? ICONS.spinner : ICONS.download}
+                    </button>
+                    
+                    <button
+                      onClick={() => handleDeleteFile(file.id)}
+                      disabled={deletingFile === file.id}
+                      className="p-1.5 sm:p-2 text-red-600 hover:bg-red-100 rounded transition-colors disabled:opacity-50"
+                      title="Xóa file"
+                    >
+                      {deletingFile === file.id ? ICONS.spinner : ICONS.trash}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
 
-      {/* Refresh Button */}
-      <div className="text-center pt-4 flex justify-center  ">
+      {/* Refresh Button - Fixed at bottom */}
+      <div className="text-center pt-4 flex justify-center flex-shrink-0">
         <button
           onClick={loadFiles}
           className="bg-blue-500 px-4 py-2 text-white text-sm border border-gray-200 rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
         >
           {ICONS.refresh}
-          <span className='text-sm font-medium text-white' >Làm mới</span>
+          <span className='text-sm font-medium text-white'>Làm mới</span>
         </button>
       </div>
 

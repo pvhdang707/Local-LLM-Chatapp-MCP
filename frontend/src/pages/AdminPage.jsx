@@ -34,6 +34,7 @@ const AdminPage = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadPermissions, setUploadPermissions] = useState([]);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   
   // State cho filter và tìm kiếm file
   const [fileFilters, setFileFilters] = useState({
@@ -238,6 +239,8 @@ const AdminPage = () => {
                 uploadPermissions={uploadPermissions}
                 setUploadPermissions={setUploadPermissions}
                 loadFiles={loadFiles}
+                selectedFiles={selectedFiles}
+                setSelectedFiles={setSelectedFiles}
               />
             )}
 
