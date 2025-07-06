@@ -24,7 +24,7 @@ const EnhancedChatToggle = ({ className = "" }) => {
   return (
     <div className={`enhanced-chat-toggle  ${className}`}>
       {/* Main Toggle */}
-      <div className="flex items-center justify-center mb-4 ">
+      <div className="flex items-center justify-center mb-0 ">
         <div className="bg-gray-100 rounded-lg p-1 flex items-center justify-between  shadow-sm">
           <button
             type="button"
@@ -124,9 +124,9 @@ const EnhancedChatToggle = ({ className = "" }) => {
           </button>
         )} */}
       </div>
-      {/*note cho nâng cao */}
+      {/* Di chuyển dòng mô tả nhỏ ra ngoài hàng chứa toggle */}
       {chatMode === "enhanced" && (
-        <div className="text-xs text-gray-500 text-center">
+        <div className="text-xs text-gray-500 text-center mt-2">
           <p>
             Cho phép bạn tìm kiếm và phân tích file với AI.
           </p>

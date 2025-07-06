@@ -161,7 +161,10 @@ const ChatSessionList = ({
                             ? 'text-blue-100' 
                             : 'text-gray-500'
                         }`}>
-                          {new Date(session.created_at).toLocaleDateString('vi-VN')}
+                          {new Date(session.created_at).toLocaleString('vi-VN', {
+                            day: '2-digit', month: '2-digit', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit', hour12: false
+                          })}
                         </div>
                       )}
                     </div>

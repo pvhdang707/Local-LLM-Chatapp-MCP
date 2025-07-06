@@ -89,6 +89,13 @@ const ChatContainer = () => {
     }
   }, [activeTab, sessions.length, isLoadingSessions, hasLoadedSessions]); // Loại bỏ loadSessions khỏi dependency
 
+  // Tự động bật trạng thái soạn mới khi không có session
+  useEffect(() => {
+    if (activeTab === 'chat' && !selectedSessionId && sessions.length > 0 && !isComposingNew) {
+      startNewSession();
+    }
+  }, [activeTab, selectedSessionId, sessions.length, isComposingNew]);
+
   // Khi user bấm "Cuộc trò chuyện mới"
   const handleNewChat = () => {
     startNewSession();
@@ -256,9 +263,9 @@ const ChatContainer = () => {
       </div>
 
       {/* Main Content - Right */}
-      <div className="flex-1 flex flex-col bg-white">
+      <div className="flex-1 flex flex-col bg-white items-center ">
         {/* Top Bar */}
-        <div className="h-16 border-b border-gray-200 flex items-center justify-between px-4 md:px-6 bg-white">
+        <div className=" h-16 border-b border-gray-200 flex items-center justify-between px-4 md:px-6 bg-white w-full max-w-5xl mx-auto">
           <div className="flex items-center gap-3">
             {/* Nút mở sidebar cho mobile */}
             <button
@@ -269,7 +276,6 @@ const ChatContainer = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            
             <h1 className="text-lg font-semibold text-gray-900">
               {activeTab === 'chat' && (
                 selectedSessionId
@@ -283,65 +289,67 @@ const ChatContainer = () => {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 overflow-hidden">
-          {activeTab === 'chat' && (
-            isLoadingChat && !selectedSessionId ? (
-              <ChatAreaLoading message="Đang tải cuộc trò chuyện..." />
-            ) : (
-              <div className="h-full flex flex-col">
-                {error && (
-                  <div className="p-4 bg-red-50 border-b border-red-200">
-                    <ChatStatus 
-                      status={error.type} 
-                      message={error.message}
-                    />
-                  </div>
-                )}
-                <div className="flex-1 overflow-hidden">
-                  {selectedSessionId ? (
-                    <ChatHistory 
-                      messages={messages} 
-                      onDownload={handleDownload}
-                      isLoading={isLoadingChat}
-                      loadingSessionId={loadingSessionId}
-                      selectedSessionId={selectedSessionId}
-                    />
-                  ) : (
-                    <Welcome onCreateNewChat={handleNewChat} />
+        <div className="flex-1 w-full flex flex-col items-center overflow-hidden ">
+          <div className="w-full max-w-5xl flex-1 flex flex-col">
+            {activeTab === 'chat' && (
+              isLoadingChat && !selectedSessionId ? (
+                <ChatAreaLoading message="Đang tải cuộc trò chuyện..." />
+              ) : (
+                <div className="h-full flex flex-col">
+                  {error && (
+                    <div className="p-4 bg-red-50 border-b border-red-200">
+                      <ChatStatus 
+                        status={error.type} 
+                        message={error.message}
+                      />
+                    </div>
                   )}
+                  <div className="flex-1 overflow-hidden">
+                    {selectedSessionId ? (
+                      <ChatHistory 
+                        messages={messages} 
+                        onDownload={handleDownload}
+                        isLoading={isLoadingChat}
+                        loadingSessionId={loadingSessionId}
+                        selectedSessionId={selectedSessionId}
+                      />
+                    ) : (
+                      <Welcome onCreateNewChat={handleNewChat} />
+                    )}
+                  </div>
                 </div>
+              )
+            )}
+            {activeTab === 'files' && (
+              <div className="h-full bg-gray-50">
+                <FileUploadPage embedded />
               </div>
-            )
-          )}
-          {activeTab === 'files' && (
-            <div className="h-full bg-gray-50">
-              <FileUploadPage embedded />
-            </div>
-          )}
-          {activeTab === 'admin' && isAdmin && (
-            <div className="h-full bg-gray-50">
-              <AdminPage embedded />
-            </div>
-          )}
+            )}
+            {activeTab === 'admin' && isAdmin && (
+              <div className="h-full bg-gray-50">
+                <AdminPage embedded />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Chat Input - Bottom */}
         {activeTab === 'chat' && sessions.length > 0 && (
-          <div className="border-t border-gray-200 bg-gray-50 p-6">
-            <ChatInput 
-              onSend={handleSendMessage}
-              disabled={!selectedSessionId && !isComposingNew}
-              isLoading={isLoadingChat}
-              showToggle={true}
-            />
+          <div className="border-t border-gray-200 bg-gray-50 p-6 w-full flex justify-center">
+            <div className="w-full max-w-3xl">
+              <ChatInput 
+                onSend={handleSendMessage}
+                disabled={isLoadingChat}
+                isLoading={isLoadingChat}
+                showToggle={true}
+              />
+            </div>
           </div>
         )}
       </div>
 
       {/* Debug Panel */}
       {/* <DebugPanel isVisible={showDebugPanel} /> */}
-      {/* Enhanced Processing Modal */}
-      <EnhancedProcessingModal />
     </div>
   );
 };

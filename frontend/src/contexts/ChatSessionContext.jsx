@@ -105,7 +105,9 @@ export const ChatSessionProvider = ({ children }) => {
     setIsLoadingChat(true);
     setError(null);
     try {
+      console.log('[LOG] Gọi createChatSession với title mặc định');
       const session = await createChatSession();
+      console.log('[LOG] Kết quả createChatSession:', session);
       setSelectedSessionId(session.id);
       setMessages([]);
       setIsComposingNew(false);
@@ -125,39 +127,43 @@ export const ChatSessionProvider = ({ children }) => {
     setError(null);
     let sessionId = selectedSessionId;
     let createdSession = null;
-    
-    // 1. Hiển thị ngay tin nhắn user lên UI (optimistic update)
-    const userMsg = {
-      sender: 'user',
-      text,
-      timestamp: new Date().toISOString(),
-      mode: mode
-    };
-    setMessages(prev => [...prev, userMsg]);
-    
+    let justCreatedSession = false;
+
     try {
       if (!sessionId && isComposingNew) {
-        // Tạo session mới trước khi gửi tin nhắn đầu tiên
+        console.log('[LOG] Chưa có session, tạo session mới trước khi gửi message:', text);
         createdSession = await createSession();
         sessionId = createdSession.id;
-        // Không thêm session thủ công vào mảng, chỉ load lại từ API
+        justCreatedSession = true;
+        console.log('[LOG] Đã tạo session mới, id:', sessionId);
       }
       if (!sessionId) throw new Error('Chưa chọn cuộc trò chuyện.');
-      
+
+      // 1. Hiển thị ngay tin nhắn user lên UI (optimistic update)
+      const userMsg = {
+        sender: 'user',
+        text,
+        timestamp: new Date().toISOString(),
+        mode: mode
+      };
+      setMessages(prev => [...prev, userMsg]);
+      console.log('[LOG] Đã thêm message user vào UI:', userMsg);
+
       // 2. Xử lý tin nhắn dựa trên mode
       let res;
       if (mode === 'enhanced') {
-        // Enhanced Chat Processing
+        console.log('[LOG] Gửi message enhanced:', text, 'với sessionId:', sessionId);
         const enhancedResult = await processEnhancedChat(text, sessionId);
         res = {
           response: enhancedResult.response?.response || enhancedResult.response?.text || 'Không có phản hồi',
           enhanced: enhancedResult.response
         };
       } else {
-        // Normal Chat Processing
+        console.log('[LOG] Gửi message thường:', text, 'với sessionId:', sessionId);
         res = await sendChatMessage(sessionId, text);
       }
-      
+      console.log('[LOG] Kết quả trả về từ backend:', res);
+
       // 3. Nếu backend trả về response từ bot, push tiếp vào UI
       if (res && (res.response || res.text)) {
         setMessages(prev => [
@@ -170,10 +176,10 @@ export const ChatSessionProvider = ({ children }) => {
             mode: mode
           }
         ]);
+        console.log('[LOG] Đã thêm message bot vào UI:', res.response || res.text);
       }
-      
-      if (createdSession) {
-        // Đã load lại session từ API trong createSession, không cần thêm thủ công
+
+      if (justCreatedSession && createdSession) {
         setSelectedSessionId(createdSession.id);
         setIsComposingNew(false);
       }

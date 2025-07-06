@@ -30,15 +30,7 @@ const Welcome = ({ onCreateNewChat }) => {
         </p>
       </div>
 
-      {/* Nút tạo chat mới */}
-      {onCreateNewChat && (
-        <button
-          onClick={onCreateNewChat}
-          className="mb-8 px-8 py-4 bg-blue-600 text-white text-lg font-semibold rounded-xl shadow-lg hover:bg-blue-700 transition-all duration-200"
-        >
-          + Tạo cuộc trò chuyện mới
-        </button>
-      )}
+      
 
       {/* Examples */}
       <div className="w-full max-w-4xl">

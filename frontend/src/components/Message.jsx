@@ -1,14 +1,21 @@
 import React from 'react';
 import ChatMessage from './ChatMessage';
+import logo from '../assets/logo.png';
+import logo_user from '../assets/user.png';
 
 const Message = ({ message, onDownload }) => {
   if (!message) return null;
   const { sender, text, timestamp, enhanced, mode } = message;
   const isUser = sender === 'user';
+  
   // Avatar: chữ cái đầu hoặc icon
   const avatar = isUser
-    ? <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-base shadow">U</div>
-    : <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 font-bold text-base shadow">🤖</div>;
+    ? <div className="w-8 h-8 rounded-full  flex items-center justify-center text-white font-bold text-base shadow">
+      <img src={logo_user} alt="logo" className="w-8 h-8" />
+    </div>
+    : <div className="w-8 h-8 rounded-full  flex items-center justify-center text-gray-700 font-bold text-base shadow">
+      <img src={logo} alt="logo" className="w-8 h-8" />
+    </div>;
 
   return (
     <div className={`flex w-full mb-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
