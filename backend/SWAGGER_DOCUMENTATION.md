@@ -64,11 +64,33 @@ http://localhost:5000/apidocs/
 - **GET** `/api/system/status` - Kiểm tra trạng thái server
 - **GET** `/api/system/health` - Kiểm tra sức khỏe hệ thống
 
+### 7. Feedback 
+- **POST** `/api/feedback` - gửi feedback về classify tới server
+
+**NOTE: Sau khi feedback thông tin feedback sẽ được lưu trong file src/data/feedback_store.json (không cần tạo file này, nếu file này rỗng thì nên xóa đi không sẽ gây lỗi)**
+
+request body: 
+```json
+{
+  "file_name": "sample.txt",
+  "original_group": "B",
+  "corrected_group": "E"
+}
+```
+
+response:
+```json
+{
+    "message": "Đã ghi nhận phản hồi"
+}
+```
+
+
 ## Authentication
 
 Hầu hết các API endpoints yêu cầu authentication bằng JWT Bearer token:
 
-```
+```json
 Authorization: Bearer <your_jwt_token>
 ```
 
@@ -124,6 +146,78 @@ Authorization: Bearer <your_jwt_token>
       "uploaded_at": "2024-01-01T00:00:00Z"
     }
   ]
+}
+```
+
+### send message 
+```json
+{
+    "chain_of_thought": "Quá trình AI (Artificial Intelligence) tìm kiếm và phân loại các file sử dụng hai giai đoạn chính: tìm kiếm và phân loại.\n\n1. Tìm kiếm: Quá trình này thực hiện bằng cách duyệt qua một thư mục hoặc hệ thống tập tin, tìm đến các file có tên đã được yêu cầu. Đây là một cuộc truy vấn dựa trên thông tin nhóm (folder name) hoặc thông tin chi tiết (file name).\n\n2. Phân loại: Quá trình phân loại có thể được thực hiện bằng cách sử dụng các phương pháp như Support Vector Machine, Decision Tree hoặc k-means clustering. Các phương pháp này sẽ sử dụng các thông tin mở rộng (metadata) của tập tin để xác định loại tập tin đó, ví dụ như phần mở rộng (extension), kích thước file, ngày sửa đổi và các thông tin khác. Ví dụ, các tập tin .txt có thể được xác định là tệp văn bản hoặc phỏng vấn.\n\nVới việc tìm kiếm và phân loại các file như trên, quá trình AI sẽ tiến hành tìm thấy các file có nội dung phỏng vấn (sample.txt) đã yêu cầu bằng cách duyệt qua thư mục hoặc hệ thống tập tin, và sử dụng phân tích kỹ thuật lý luận để xác định loại của các tệp.",
+    "files": [
+        {
+            "classification": {
+                "confidence": 0.8,
+                "group_id": "B",
+                "group_name": "Tài liệu marketing",
+                "method": "ai_based",
+                "reason": "Contains information related to job interview, which is a common marketing term"
+            },
+            "download_url": "/api/user/files/download/3fc76dd4-4b53-4fa9-a529-c94aa5df05ea",
+            "match_score": 6,
+            "name": "sample.txt",
+            "type": "text/plain",
+            "uploaded_by": "c314b7c3-c63d-4f04-b707-390f104f0883"
+        },
+        {
+            "classification": {
+                "confidence": 0.8,
+                "group_id": "B",
+                "group_name": "Tài liệu marketing",
+                "method": "ai_based",
+                "reason": "Contains information related to job interview, which is a common marketing term"
+            },
+            "download_url": "/api/user/files/download/a1d191ea-b011-40b2-90b0-b44c7d723340",
+            "match_score": 6,
+            "name": "sample.txt",
+            "type": "text/plain",
+            "uploaded_by": "c314b7c3-c63d-4f04-b707-390f104f0883"
+        }
+    ],
+    "is_file_search": true,
+    "metadata_results": [
+        {
+            "classification": {
+                "confidence": 0.8,
+                "group_id": "B",
+                "group_name": "Tài liệu marketing",
+                "method": "ai_based",
+                "reason": "Contains information related to job interview, which is a common marketing term"
+            },
+            "cloud_result": {
+                "error": "Cloudinary API error: 400",
+                "response": "{\"error\":{\"message\":\"Invalid JSON\"}}",
+                "success": false
+            },
+            "file_id": "3fc76dd4-4b53-4fa9-a529-c94aa5df05ea"
+        },
+        {
+            "classification": {
+                "confidence": 0.8,
+                "group_id": "B",
+                "group_name": "Tài liệu marketing",
+                "method": "ai_based",
+                "reason": "Contains information related to job interview, which is a common marketing term"
+            },
+            "cloud_result": {
+                "error": "Cloudinary API error: 400",
+                "response": "{\"error\":{\"message\":\"Invalid JSON\"}}",
+                "success": false
+            },
+            "file_id": "a1d191ea-b011-40b2-90b0-b44c7d723340"
+        }
+    ],
+    "response": "Đã tìm thấy 2 file, metadata đã gửi.\n1. sample.txt (text/plain) - Nhóm: Tài liệu marketing - [Tải về](/api/user/files/download/3fc76dd4-4b53-4fa9-a529-c94aa5df05ea)\n2. sample.txt (text/plain) - Nhóm: Tài liệu marketing - [Tải về](/api/user/files/download/a1d191ea-b011-40b2-90b0-b44c7d723340)\n",
+    "success": true
 }
 ```
 

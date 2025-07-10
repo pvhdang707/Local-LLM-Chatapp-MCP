@@ -6,6 +6,7 @@ from src.file_classifier import file_classifier
 from src.cloud_integration import cloud_integration
 from src.file_manager import file_manager
 from src.file_reasoner import generate_chain_of_thought
+from src.feedback_store import load_feedback
 
 chat_bp = Blueprint('chat', __name__)
 
@@ -319,7 +320,21 @@ def send_message(session_id):
                 if not file_info:
                     continue
                 # 3. Phân loại file bằng AI (LLM)
-                classification = file_classifier.classify_file(file_info['file_path'], file_info['original_name'])
+                # classification = file_classifier.classify_file(file_info['file_path'], file_info['original_name'])
+                
+                #LRHF
+                feedback_data = load_feedback()
+                # Nếu file đã được sửa trước đó, ưu tiên dùng group người dùng cung cấp
+                corrected = feedback_data.get(file_info["original_name"])
+                if corrected:
+                    classification = {
+                        "group_name": corrected["corrected_group"],
+                        "note": "Dựa trên phản hồi người dùng"
+                    }
+                else:
+                    classification = file_classifier.classify_file(file_info['file_path'], file_info['original_name'])
+                    
+                    
                 # 4. Gửi metadata lên cloud
                 cloud_result = cloud_integration.send_metadata_to_cloud(file_info, classification)
                 metadata_results.append({

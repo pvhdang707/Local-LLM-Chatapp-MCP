@@ -10,6 +10,7 @@ from .system_controller import system_bp
 from .public_chat_controller import public_chat_bp
 from .enhanced_chat_controller import enhanced_chat_bp
 from .agentic_ai_controller import agentic_ai_bp
+from .feedback import feedback_bp
 
 # Danh sách tất cả blueprints
 all_blueprints = [
@@ -21,5 +22,7 @@ all_blueprints = [
     system_bp,
     public_chat_bp,
     enhanced_chat_bp,
-    agentic_ai_bp
+    agentic_ai_bp,
+    feedback_bp,
+    
 ] 
