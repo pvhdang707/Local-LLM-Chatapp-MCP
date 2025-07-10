@@ -5,6 +5,7 @@ from src.file_search import file_search_engine
 from src.file_classifier import file_classifier
 from src.cloud_integration import cloud_integration
 from src.file_manager import file_manager
+from src.file_reasoner import generate_chain_of_thought
 
 chat_bp = Blueprint('chat', __name__)
 
@@ -336,6 +337,9 @@ def send_message(session_id):
                     'download_url': file_url,
                     'classification': classification
                 })
+            #CoT
+            chain_of_thought = generate_chain_of_thought(files_found, message)
+            
             if files_found:
                 response = f"Đã tìm thấy {len(files_found)} file, metadata đã gửi.\n"
                 for i, file_info in enumerate(files_found, 1):
@@ -347,7 +351,8 @@ def send_message(session_id):
                 'response': response,
                 'files': files_found,
                 'metadata_results': metadata_results,
-                'is_file_search': True
+                'is_file_search': True,
+                'chain_of_thought': chain_of_thought
             })
         # Nếu không phải tìm file, xử lý chat bình thường
         result = chat_manager.send_message(
