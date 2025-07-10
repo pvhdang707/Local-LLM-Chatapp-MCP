@@ -95,8 +95,9 @@ class FileClassifier:
             Nội dung file:
             {content[:2000]}
             
-            Trả lời theo format: GROUP_ID|GROUP_NAME|CONFIDENCE|REASON
-            Ví dụ: A|Tài liệu quan trọng|0.9|Chứa thông tin về kế hoạch kinh doanh
+            Hãy chỉ trả về kết quả trên một dòng duy nhất, theo đúng **cấu trúc sau** (không được viết thêm gì khác):
+            <GROUP_ID>|<GROUP_NAME>|<CONFIDENCE>|<REASON>
+            **Ví dụ đúng**: A|Tài liệu quan trọng|0.9|Chứa thông tin về kế hoạch kinh doanh
             """
             
             # Gọi AI
