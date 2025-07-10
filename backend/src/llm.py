@@ -1,5 +1,6 @@
 import uuid
 from typing import TypedDict, List
+from datetime import datetime
 
 from langchain.schema import Document
 from langchain_ollama import ChatOllama
@@ -125,6 +126,29 @@ def create_workflow() -> StateGraph:
     return workflow.compile()
 
 workflow = create_workflow()
+
+def get_current_timestamp():
+    """Lấy timestamp hiện tại"""
+    return datetime.utcnow().isoformat()
+
+def process_message(message: str) -> str:
+    """Xử lý message với LLM"""
+    try:
+        config = {"configurable": {"thread_id": str(uuid.uuid4())}}
+        initial_state = {
+            "question": message,
+            "generation": "",
+            "documents": [],
+            "steps": [],
+            "file_urls": [],
+            "file_documents": [],
+            "chat_context": ""
+        }
+        result = workflow.invoke(initial_state, config)
+        return result.get("generation", "Xin lỗi, tôi không thể trả lời câu hỏi này.")
+    except Exception as e:
+        return f"Lỗi xử lý message: {str(e)}"
+
 if __name__ == "__main__":
     config = {"configurable": {"thread_id": str(uuid.uuid4())}}
     initial_state = {

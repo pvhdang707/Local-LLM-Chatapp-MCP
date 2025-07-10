@@ -874,3 +874,50 @@ def admin_upload_files_batch():
             
     except Exception as e:
         return jsonify({'error': str(e)}), 500 
+
+@file_bp.route('/files/download/export/<filename>', methods=['GET'])
+@require_auth
+def download_export_file(filename):
+    """
+    Download file Excel export
+    ---
+    tags:
+      - File Management
+    parameters:
+      - name: Authorization
+        in: header
+        type: string
+        required: true
+        description: Bearer token (JWT)
+      - name: filename
+        in: path
+        type: string
+        required: true
+        description: Tên file Excel export
+    responses:
+      200:
+        description: Download file thành công
+      404:
+        description: File không tồn tại
+      401:
+        description: Không xác thực
+    """
+    try:
+        # Kiểm tra file có tồn tại không
+        file_path = os.path.join('uploads', 'exports', filename)
+        if not os.path.exists(file_path):
+            return jsonify({'error': 'File không tồn tại'}), 404
+        
+        # Kiểm tra extension
+        if not filename.endswith('.xlsx'):
+            return jsonify({'error': 'Chỉ cho phép download file Excel'}), 400
+        
+        return send_file(
+            file_path,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500 
