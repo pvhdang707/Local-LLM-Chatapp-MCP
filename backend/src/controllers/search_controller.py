@@ -21,7 +21,7 @@ def search_files():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
         example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJ1c2VyMSIsInJvbGUiOiJ1c2VyIiwiZXhwIjoxNzM1Njg5NjAwfQ.example_signature"
       - name: body
         in: body
@@ -37,12 +37,12 @@ def search_files():
               example: "kế hoạch 2024"
             search_type:
               type: string
-              description: Loại tìm kiếm (name/content/both)
+              description: "Loại tìm kiếm - name, content, both"
               example: "both"
               enum: ["name", "content", "both"]
             limit:
               type: integer
-              description: Số lượng kết quả tối đa (mặc định 20)
+              description: "Số lượng kết quả tối đa - mặc định 20"
               example: 20
     responses:
       200:
@@ -181,13 +181,13 @@ def get_search_suggestions():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
         example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJ1c2VyMSIsInJvbGUiOiJ1c2VyIiwiZXhwIjoxNzM1Njg5NjAwfQ.example_signature"
       - name: query
         in: query
         type: string
         required: false
-        description: Từ khóa để gợi ý (tùy chọn)
+        description: "Từ khóa để gợi ý - tùy chọn"
         example: "kế"
     responses:
       200:

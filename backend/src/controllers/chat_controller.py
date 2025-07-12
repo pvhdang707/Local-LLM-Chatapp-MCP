@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from src.auth import require_auth
+from src.auth import require_auth, require_department_access
 from src.chat_manager import chat_manager
 from src.file_search import file_search_engine
 from src.file_classifier import file_classifier
@@ -74,7 +74,7 @@ def get_chat_sessions():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
         example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJ1c2VyMSIsInJvbGUiOiJ1c2VyIiwiZXhwIjoxNzM1Njg5NjAwfQ.example_signature"
     responses:
       200:
@@ -162,7 +162,7 @@ def get_chat_messages(session_id):
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
         example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJ1c2VyMSIsInJvbGUiOiJ1c2VyIiwiZXhwIjoxNzM1Njg5NjAwfQ.example_signature"
       - name: session_id
         in: path
@@ -174,7 +174,7 @@ def get_chat_messages(session_id):
         in: query
         type: integer
         required: false
-        description: Số lượng messages tối đa (mặc định 50)
+        description: "Số lượng messages tối đa - mặc định 50"
         example: 50
     responses:
       200:
@@ -394,7 +394,7 @@ def delete_chat_session(session_id):
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
         example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJ1c2VyMSIsInJvbGUiOiJ1c2VyIiwiZXhwIjoxNzM1Njg5NjAwfQ.example_signature"
       - name: session_id
         in: path
@@ -506,7 +506,7 @@ def update_session_title(session_id):
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
         example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJ1c2VyMSIsInJvbGUiOiJ1c2VyIiwiZXhwIjoxNzM1Njg5NjAwfQ.example_signature"
       - name: session_id
         in: path
@@ -649,7 +649,7 @@ def chat():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
         example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJ1c2VyMSIsInJvbGUiOiJ1c2VyIiwiZXhwIjoxNzM1Njg5NjAwfQ.example_signature"
       - name: body
         in: body
@@ -763,7 +763,7 @@ def chat_enhanced():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
         example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJ1c2VyMSIsInJvbGUiOiJ1c2VyIiwiZXhwIjoxNzM1Njg5NjAwfQ.example_signature"
       - name: body
         in: body
@@ -779,7 +779,7 @@ def chat_enhanced():
               example: "Tìm file về kế hoạch 2024"
             session_id:
               type: string
-              description: ID session (tùy chọn, nếu không có sẽ tạo mới)
+              description: "ID session - tùy chọn, nếu không có sẽ tạo mới"
               example: "session_123"
     responses:
       200:
@@ -801,7 +801,7 @@ def chat_enhanced():
               example: true
             search_results:
               type: object
-              description: Kết quả tìm kiếm (chỉ có khi is_file_search = true)
+              description: "Kết quả tìm kiếm - chỉ có khi is_file_search = true"
               properties:
                 total_results:
                   type: integer

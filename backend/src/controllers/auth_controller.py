@@ -118,6 +118,128 @@ def login():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@auth_bp.route('/auth/register', methods=['POST'])
+def register():
+    """
+    Đăng ký user mới
+    ---
+    tags:
+      - Auth
+    consumes:
+      - application/json
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - username
+            - password
+          properties:
+            username:
+              type: string
+              description: "Tên đăng nhập - tối thiểu 3 ký tự"
+              example: "newuser"
+              minLength: 3
+            password:
+              type: string
+              description: "Mật khẩu - tối thiểu 6 ký tự"
+              example: "123456"
+              minLength: 6
+            department:
+              type: string
+              description: "Phòng ban - Sales, Tài chính, HR"
+              example: "Sales"
+              enum: ["Sales", "Tài chính", "HR"]
+    responses:
+      201:
+        description: Đăng ký thành công
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            message:
+              type: string
+              example: "Đăng ký thành công"
+            user:
+              type: object
+              properties:
+                id:
+                  type: string
+                  example: "user_123"
+                username:
+                  type: string
+                  example: "newuser"
+                role:
+                  type: string
+                  example: "user"
+                department:
+                  type: string
+                  example: "Sales"
+        examples:
+          application/json: {
+            "success": true,
+            "message": "Đăng ký thành công",
+            "user": {
+              "id": "user_123",
+              "username": "newuser",
+              "role": "user",
+              "department": "Sales"
+            }
+          }
+      400:
+        description: Dữ liệu không hợp lệ
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Username đã tồn tại"
+          }
+      500:
+        description: Lỗi server
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+        examples:
+          application/json: {
+            "error": "Lỗi server nội bộ"
+          }
+    """
+    try:
+        data = request.json
+        username = data.get('username', '').strip()
+        password = data.get('password', '').strip()
+        department = data.get('department')
+
+        # Validate input
+        if not username or len(username) < 3:
+            return jsonify({'error': 'Username phải có ít nhất 3 ký tự'}), 400
+
+        if not password or len(password) < 6:
+            return jsonify({'error': 'Password phải có ít nhất 6 ký tự'}), 400
+
+        # Validate department
+        valid_departments = ["Sales", "Tài chính", "HR", None]
+        if department not in valid_departments:
+            return jsonify({'error': 'Department phải là "Sales", "Tài chính", "HR" hoặc để trống'}), 400
+
+        result = auth_manager.register_user(username, password, department)
+        if result['success']:
+            return jsonify(result), 201
+        else:
+            return jsonify(result), 400
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @auth_bp.route('/auth/profile', methods=['GET'])
 @require_auth
 def get_profile():
@@ -131,7 +253,7 @@ def get_profile():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
         example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJ1c2VyMSIsInJvbGUiOiJ1c2VyIiwiZXhwIjoxNzM1Njg5NjAwfQ.example_signature"
     responses:
       200:
@@ -208,6 +330,7 @@ def get_profile():
             'id': user.id,
             'username': user.username,
             'role': user.role,
+            'department': user.department,
             'created_at': user.created_at,
             'is_active': user.is_active
         })
@@ -231,7 +354,7 @@ def admin_register_user():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT) - Admin only
+        description: "Bearer token JWT - Admin only"
         example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTczNTY4OTYwMH0.example_signature"
       - name: body
         in: body
@@ -244,19 +367,24 @@ def admin_register_user():
           properties:
             username:
               type: string
-              description: Tên đăng nhập (tối thiểu 3 ký tự)
+              description: "Tên đăng nhập - tối thiểu 3 ký tự"
               example: "newuser"
               minLength: 3
             password:
               type: string
-              description: Mật khẩu (tối thiểu 6 ký tự)
+              description: "Mật khẩu - tối thiểu 6 ký tự"
               example: "123456"
               minLength: 6
             role:
               type: string
-              description: Vai trò của user (user/admin)
+              description: "Vai trò của user - user hoặc admin"
               example: "user"
               enum: ["user", "admin"]
+            department:
+              type: string
+              description: "Phòng ban - Sales, Tài chính, HR"
+              example: "Sales"
+              enum: ["Sales", "Tài chính", "HR"]
     responses:
       201:
         description: Tạo user thành công
@@ -281,6 +409,9 @@ def admin_register_user():
                 role:
                   type: string
                   example: "user"
+                department:
+                  type: string
+                  example: "Sales"
         examples:
           application/json: {
             "success": true,
@@ -288,7 +419,8 @@ def admin_register_user():
             "user": {
               "id": "124",
               "username": "newuser",
-              "role": "user"
+              "role": "user",
+              "department": "Sales"
             }
           }
       400:
@@ -348,8 +480,15 @@ def admin_register_user():
     username = data.get('username')
     password = data.get('password')
     role = data.get('role', 'user')
+    department = data.get('department')
+    
     if not username or not password:
         return jsonify({'success': False, 'message': 'Thiếu username hoặc password'}), 400
+    
+    # Validate department
+    valid_departments = ["Sales", "Tài chính", "HR", None]
+    if department not in valid_departments:
+        return jsonify({'success': False, 'message': 'Department phải là "Sales", "Tài chính", "HR" hoặc để trống'}), 400
     
     # Sử dụng logic tương tự như register_user trong auth_manager
     from src.database import get_db, User as DBUser
@@ -364,12 +503,13 @@ def admin_register_user():
         # Hash password
         hashed_password = auth_manager.hash_password(password)
         
-        # Tạo user mới với role được chỉ định
+        # Tạo user mới với role và department được chỉ định
         new_user = DBUser(
             id=str(uuid.uuid4()),
             username=username,
             password=hashed_password,
             role=role,
+            department=department,
             created_at=datetime.utcnow(),
             is_active=True
         )
@@ -383,7 +523,8 @@ def admin_register_user():
             'user': {
                 'id': str(new_user.id),
                 'username': new_user.username,
-                'role': new_user.role
+                'role': new_user.role,
+                'department': new_user.department
             }
         }), 201
         
@@ -407,7 +548,7 @@ def get_all_users():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT) - Admin only
+        description: "Bearer token JWT - Admin only"
         example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTczNTY4OTYwMH0.example_signature"
       - name: page
         in: query
@@ -419,7 +560,7 @@ def get_all_users():
         in: query
         type: integer
         required: false
-        description: Số user mỗi trang (mặc định là 10)
+        description: "Số user mỗi trang - mặc định 10"
         example: 10
     responses:
       200:
@@ -564,7 +705,7 @@ def update_user(user_id):
         in: header
         type: string
         required: true
-        description: Bearer token (JWT) - Admin only
+        description: "Bearer token JWT - Admin only"
         example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTczNTY4OTYwMH0.example_signature"
       - name: user_id
         in: path
@@ -743,7 +884,7 @@ def delete_user(user_id):
         in: header
         type: string
         required: true
-        description: Bearer token (JWT) - Admin only
+        description: "Bearer token JWT - Admin only"
         example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTczNTY4OTYwMH0.example_signature"
       - name: user_id
         in: path

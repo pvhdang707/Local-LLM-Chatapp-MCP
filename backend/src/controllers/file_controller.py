@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, send_file
-from src.auth import require_auth, require_admin
+from src.auth import require_auth, require_admin, require_department_access
 from src.file_manager import file_manager
 from src.file_classifier import file_classifier
 from src.cloud_integration import cloud_integration
@@ -14,7 +14,7 @@ file_bp = Blueprint('file', __name__)
 @require_auth
 def get_user_files():
     """
-    Lấy danh sách files của user hiện tại (admin xem được toàn bộ)
+    Lấy danh sách files của user hiện tại (admin xem được toàn bộ, user chỉ xem được file trong department của mình)
     ---
     tags:
       - File
@@ -45,10 +45,13 @@ def get_user_files():
     try:
         user_id = request.user['user_id']
         user_role = request.user.get('role', 'user')
+        user_department = request.user.get('department')
+        
         if user_role == 'admin':
             files = file_manager.get_all_files()
         else:
-            files = file_manager.get_files_by_user(user_id)
+            # User chỉ xem được file trong department của mình
+            files = file_manager.get_files_by_department(user_department)
         return jsonify({'files': files})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -68,7 +71,7 @@ def user_upload_file():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
         example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJ1c2VyMSIsInJvbGUiOiJ1c2VyIiwiZXhwIjoxNzM1Njg5NjAwfQ.example_signature"
       - name: file
         in: formData
@@ -176,7 +179,8 @@ def user_upload_file():
             return jsonify({'error': 'Không có file được chọn'}), 400
             
         user_id = request.user['user_id']
-        result = file_manager.add_file(file, user_id)
+        user_department = request.user.get('department')
+        result = file_manager.add_file(file, user_id, user_department)
         
         if result['success']:
             return jsonify(result), 201
@@ -199,7 +203,7 @@ def get_user_files_enhanced():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
         example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJ1c2VyMSIsInJvbGUiOiJ1c2VyIiwiZXhwIjoxNzM1Njg5NjAwfQ.example_signature"
     responses:
       200:
@@ -611,7 +615,7 @@ def admin_upload_file():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT) - Admin only
+        description: "Bearer token JWT - Admin only"
       - name: file
         in: formData
         type: file
@@ -679,12 +683,12 @@ def user_upload_files_batch():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
       - name: files
         in: formData
         type: file
         required: true
-        description: Danh sách files cần upload (multiple)
+        description: "Danh sách files cần upload - multiple"
     responses:
       201:
         description: Upload files thành công
@@ -794,12 +798,12 @@ def admin_upload_files_batch():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT) - Admin only
+        description: "Bearer token JWT - Admin only"
       - name: files
         in: formData
         type: file
         required: true
-        description: Danh sách files cần upload (multiple)
+        description: "Danh sách files cần upload - multiple"
       - name: permissions
         in: formData
         type: string
@@ -888,7 +892,7 @@ def download_export_file(filename):
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
       - name: filename
         in: path
         type: string

@@ -21,7 +21,7 @@ def plan_actions():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
       - name: body
         in: body
         required: true
@@ -142,7 +142,7 @@ def execute_plan():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
       - name: body
         in: body
         required: true
@@ -292,7 +292,7 @@ def plan_and_execute():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
       - name: body
         in: body
         required: true
@@ -420,7 +420,7 @@ def get_available_actions():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
     responses:
       200:
         description: Danh sách actions thành công
