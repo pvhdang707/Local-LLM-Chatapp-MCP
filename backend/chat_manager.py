@@ -1,8 +1,9 @@
 import uuid
+import asyncio
 from typing import Dict, List, Optional
 from datetime import datetime
 from database import get_db, ChatSession as DBChatSession, ChatMessage as DBChatMessage
-from llm import workflow, RagDataContext
+from llm import workflow, RagDataContext, smart_answer_question, get_system_info, should_use_agentic_system
 import vectordb
 
 class ChatManager:
@@ -106,8 +107,9 @@ class ChatManager:
             db.close()
 
     def send_message(self, session_id: str, message: str, user_id: str = None, 
-                    username: str = "anonymous", file_urls: List[str] = None) -> Dict:
-        """Gửi message và nhận response với context memory"""
+                    username: str = "anonymous", file_urls: List[str] = None,
+                    use_agentic: bool = None, strategy: str = "adaptive") -> Dict:
+        """Gửi message và nhận response với AI Agentic system"""
         db = next(get_db())
         try:
             # Lấy context từ các messages trước đó
@@ -121,22 +123,45 @@ class ChatManager:
                     for msg in context_messages[-5:]  # Lấy 5 messages gần nhất
                 ])
             
-            # Tạo RagDataContext với context
-            rag_context = RagDataContext(
-                question=message,
-                generation="",
-                documents=[],
-                steps=[],
-                file_urls=file_urls or [],
-                file_documents=[],
-                chat_context=context  # Thêm context vào
-            )
+            # Sử dụng AI Smart System để generate response
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
             
-            # Chạy workflow để generate response
-            config = {"configurable": {"thread_id": str(uuid.uuid4())}}
-            result = workflow.invoke(rag_context, config)
-            
-            response = result.get("generation", "Xin lỗi, tôi không thể trả lời câu hỏi này.")
+            try:
+                ai_result = loop.run_until_complete(
+                    smart_answer_question(
+                        question=message,
+                        file_urls=file_urls or [],
+                        chat_context=context,
+                        use_agentic=use_agentic,
+                        strategy=strategy
+                    )
+                )
+                
+                response = ai_result.get("answer", "Xin lỗi, tôi không thể trả lời câu hỏi này.")
+                method_used = ai_result.get("method", "unknown")
+                confidence = ai_result.get("confidence", 0.0)
+                
+            except Exception as e:
+                print(f"AI system error, falling back to traditional RAG: {e}")
+                # Fallback về RAG system cũ
+                rag_context = RagDataContext(
+                    question=message,
+                    generation="",
+                    documents=[],
+                    steps=[],
+                    file_urls=file_urls or [],
+                    file_documents=[],
+                    chat_context=context
+                )
+                
+                config = {"configurable": {"thread_id": str(uuid.uuid4())}}
+                result = workflow.invoke(rag_context, config)
+                response = result.get("generation", "Xin lỗi, tôi không thể trả lời câu hỏi này.")
+                method_used = "traditional_rag_fallback"
+                confidence = 0.7
+            finally:
+                loop.close()
             
             # Lưu message và response vào database
             chat_message = DBChatMessage(
@@ -164,7 +189,14 @@ class ChatManager:
                 "message": "Gửi message thành công",
                 "response": response,
                 "message_id": chat_message.id,
-                "context_used": len(context_messages)
+                "context_used": len(context_messages),
+                "ai_method": method_used,
+                "confidence": confidence,
+                "system_info": {
+                    "agentic_recommended": should_use_agentic_system(message, file_urls),
+                    "strategy_used": strategy,
+                    "file_count": len(file_urls) if file_urls else 0
+                }
             }
             
         except Exception as e:
@@ -231,5 +263,41 @@ class ChatManager:
         finally:
             db.close()
 
+    def get_ai_system_info(self) -> Dict:
+        """Lấy thông tin về AI system"""
+        return get_system_info()
+    
+    def send_message_with_strategy(self, session_id: str, message: str, 
+                                 strategy: str = "adaptive", **kwargs) -> Dict:
+        """Gửi message với strategy cụ thể"""
+        return self.send_message(
+            session_id=session_id,
+            message=message,
+            strategy=strategy,
+            **kwargs
+        )
+    
+    def analyze_message_complexity(self, message: str, file_urls: List[str] = None) -> Dict:
+        """Phân tích độ phức tạp của message để đề xuất system"""
+        is_complex = should_use_agentic_system(message, file_urls)
+        
+        complexity_indicators = {
+            "has_analysis_keywords": any(keyword in message.lower() for keyword in 
+                                       ["phân tích", "so sánh", "đánh giá", "analyze", "compare"]),
+            "has_planning_keywords": any(keyword in message.lower() for keyword in 
+                                       ["kế hoạch", "chiến lược", "plan", "strategy"]),
+            "has_multiple_files": file_urls and len(file_urls) > 1,
+            "is_long_question": len(message.split()) > 10,
+            "has_reasoning_keywords": any(keyword in message.lower() for keyword in 
+                                        ["tại sao", "như thế nào", "why", "how", "explain"])
+        }
+        
+        return {
+            "is_complex": is_complex,
+            "recommended_system": "agentic" if is_complex else "rag",
+            "complexity_indicators": complexity_indicators,
+            "recommended_strategy": "adaptive" if is_complex else "sequential"
+        }
+        
 # Khởi tạo ChatManager
-chat_manager = ChatManager() 
+chat_manager = ChatManager()

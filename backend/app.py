@@ -9,7 +9,7 @@ from flask_cors import CORS
 from datetime import datetime
 
 # Import LLM components
-from llm import workflow, RagDataContext
+from llm import workflow, RagDataContext, smart_answer_question, get_system_info
 
 # Load environment variables
 from dotenv import load_dotenv
@@ -143,11 +143,13 @@ def get_chat_messages(session_id):
 @app.route('/chat/sessions/<session_id>/send', methods=['POST'])
 @require_auth
 def send_message(session_id):
-    """Gửi message trong một session"""
+    """Gửi message trong một session với AI Agentic support"""
     try:
         data = request.json
         message = data.get('message', '').strip()
         file_urls = data.get('file_urls', [])
+        use_agentic = data.get('use_agentic')  # None = auto-decide, True/False = force
+        strategy = data.get('strategy', 'adaptive')  # adaptive, sequential, parallel
         
         if not message:
             return jsonify({'error': 'Message không được để trống'}), 400
@@ -160,7 +162,9 @@ def send_message(session_id):
             message=message,
             user_id=user_id,
             username=username,
-            file_urls=file_urls
+            file_urls=file_urls,
+            use_agentic=use_agentic,
+            strategy=strategy
         )
         
         if result['success']:
@@ -234,12 +238,14 @@ def create_public_chat_session():
 
 @app.route('/chat/public/sessions/<session_id>/send', methods=['POST'])
 def send_public_message(session_id):
-    """Gửi message trong public session"""
+    """Gửi message trong public session với AI Agentic support"""
     try:
         data = request.json
         message = data.get('message', '').strip()
         username = data.get('username', 'anonymous')
         file_urls = data.get('file_urls', [])
+        use_agentic = data.get('use_agentic')
+        strategy = data.get('strategy', 'adaptive')
         
         if not message:
             return jsonify({'error': 'Message không được để trống'}), 400
@@ -248,7 +254,9 @@ def send_public_message(session_id):
             session_id=session_id,
             message=message,
             username=username,
-            file_urls=file_urls
+            file_urls=file_urls,
+            use_agentic=use_agentic,
+            strategy=strategy
         )
         
         if result['success']:
@@ -537,7 +545,159 @@ def chat_public():
         print(f"Error in public chat: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
 
-# ==================== UTILITY ENDPOINTS ====================
+# ==================== AI AGENTIC SYSTEM ENDPOINTS ====================
+
+@app.route('/ai/system/info', methods=['GET'])
+def get_ai_system_info():
+    """Lấy thông tin về AI system"""
+    try:
+        info = chat_manager.get_ai_system_info()
+        return jsonify(info)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/ai/analyze/complexity', methods=['POST'])
+def analyze_message_complexity():
+    """Phân tích độ phức tạp của message"""
+    try:
+        data = request.json
+        message = data.get('message', '').strip()
+        file_urls = data.get('file_urls', [])
+        
+        if not message:
+            return jsonify({'error': 'Message không được để trống'}), 400
+        
+        analysis = chat_manager.analyze_message_complexity(message, file_urls)
+        return jsonify(analysis)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/ai/chat/smart', methods=['POST'])
+def smart_chat():
+    """Smart chat endpoint sử dụng AI Agentic system"""
+    try:
+        data = request.json
+        question = data.get('question', '').strip()
+        file_urls = data.get('file_urls', [])
+        chat_context = data.get('chat_context', '')
+        use_agentic = data.get('use_agentic')  # None = auto-decide
+        strategy = data.get('strategy', 'adaptive')
+        
+        if not question:
+            return jsonify({'error': 'Question không được để trống'}), 400
+        
+        import asyncio
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            result = loop.run_until_complete(
+                smart_answer_question(
+                    question=question,
+                    file_urls=file_urls,
+                    chat_context=chat_context,
+                    use_agentic=use_agentic,
+                    strategy=strategy
+                )
+            )
+            return jsonify(result)
+        finally:
+            loop.close()
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/ai/agents/status', methods=['GET'])
+@require_auth
+def get_agents_status():
+    """Lấy trạng thái của các AI Agents (cần auth)"""
+    try:
+        from llm import get_agent_status
+        status = get_agent_status()
+        return jsonify(status)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/ai/agents/memory/clear', methods=['POST'])
+@require_auth
+@require_admin
+def clear_agents_memory():
+    """Xóa memory của tất cả agents (chỉ admin)"""
+    try:
+        from llm import clear_agent_memories
+        clear_agent_memories()
+        return jsonify({'success': True, 'message': 'Agent memories cleared'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/ai/strategies', methods=['GET'])
+def get_available_strategies():
+    """Lấy danh sách các strategies có sẵn"""
+    return jsonify({
+        'strategies': [
+            {
+                'name': 'sequential',
+                'description': 'Thực hiện các tasks tuần tự, từng bước một',
+                'best_for': 'Câu hỏi đơn giản, cần độ chính xác cao'
+            },
+            {
+                'name': 'parallel',
+                'description': 'Thực hiện các tasks song song để tăng tốc độ',
+                'best_for': 'Câu hỏi phức tạp, có nhiều phần độc lập'
+            },
+            {
+                'name': 'adaptive',
+                'description': 'Tự động điều chỉnh theo tình huống',
+                'best_for': 'Mặc định, phù hợp với hầu hết các trường hợp'
+            }
+        ],
+        'default_strategy': 'adaptive'
+    })
+
+@app.route('/ai/demo', methods=['POST'])
+def ai_demo():
+    """Demo endpoint để test AI Agentic system"""
+    try:
+        data = request.json
+        demo_type = data.get('demo_type', 'simple')
+        
+        demo_questions = {
+            'simple': "Thủ đô của Việt Nam là gì?",
+            'analysis': "Phân tích và so sánh các chiến lược phát triển kinh tế của Việt Nam trong 10 năm qua",
+            'planning': "Lập kế hoạch marketing cho một startup công nghệ mới",
+            'research': "Nghiên cứu về tác động của AI đến thị trường lao động"
+        }
+        
+        question = demo_questions.get(demo_type, demo_questions['simple'])
+        
+        import asyncio
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            result = loop.run_until_complete(
+                smart_answer_question(
+                    question=question,
+                    use_agentic=demo_type != 'simple',
+                    strategy='adaptive'
+                )
+            )
+            
+            return jsonify({
+                'demo_type': demo_type,
+                'question': question,
+                'result': result
+            })
+        finally:
+            loop.close()
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ==================== EXISTING ENDPOINTS CONTINUE ====================
 
 @app.route('/status', methods=['GET'])
 def server_status():
