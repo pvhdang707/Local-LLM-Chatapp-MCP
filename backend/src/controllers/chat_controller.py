@@ -897,39 +897,40 @@ def chat_enhanced():
             if search_results['total_results'] > 0:
                 files_found = []
                 for result in search_results['results'][:5]:  # Lấy 5 kết quả đầu
+                    file_id = result.get('id')
+                    file_url = f"/api/user/files/download/{file_id}" if file_id else None
                     files_found.append({
                         'name': result['name'],
                         'type': result['type'],
                         'uploaded_by': result['uploaded_by'],
-                        'match_score': result['match_score']
+                        'match_score': result['match_score'],
+                        'download_url': file_url
                     })
-                
                 response = f"Đã tìm thấy {search_results['total_results']} file phù hợp:\n"
                 for i, file_info in enumerate(files_found, 1):
                     response += f"{i}. {file_info['name']} ({file_info['type']}) - Điểm: {file_info['match_score']}\n"
-                
                 # Gửi metadata lên cloud cho các file tìm được
                 for result in search_results['results']:
                     try:
                         file_info = file_manager.get_file_by_id(result['id'])
                         if file_info:
-                            # Lấy classification nếu có
                             metadata_result = cloud_integration.get_metadata_from_cloud(result['id'])
                             classification = metadata_result.get('metadata', {}).get('classification', {})
-                            
-                            # Gửi metadata
                             cloud_integration.send_metadata_to_cloud(file_info, classification)
                     except Exception as e:
                         print(f"Error sending metadata for file {result['id']}: {e}")
-                
+                # Sinh chain of thought
+                from src.file_reasoner import generate_chain_of_thought
+                chain_of_thought = generate_chain_of_thought(files_found, message)
             else:
                 response = "Không tìm thấy file nào phù hợp với yêu cầu của bạn."
-            
+                chain_of_thought = "Không tìm thấy file nào phù hợp với yêu cầu."
             return jsonify({
                 'success': True,
                 'response': response,
                 'search_results': search_results,
-                'is_file_search': True
+                'is_file_search': True,
+                'chain_of_thought': chain_of_thought
             })
         else:
             # Sử dụng chat thông thường
