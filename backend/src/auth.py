@@ -13,11 +13,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class User:
-    def __init__(self, username: str, password: str, role: str = "user", id: str = None):
+    def __init__(self, username: str, password: str, role: str = "user", department: str = None, id: str = None):
         self.id = id or self._generate_id()
         self.username = username
         self.password = password
         self.role = role
+        self.department = department
         self.created_at = datetime.now()
         self.is_active = True
 
@@ -30,13 +31,14 @@ class User:
             "username": self.username,
             "password": self.password,  # Đã được hash
             "role": self.role,
+            "department": self.department,
             "created_at": self.created_at.isoformat() if isinstance(self.created_at, datetime) else self.created_at,
             "is_active": self.is_active
         }
 
     @classmethod
     def from_db_user(cls, db_user: DBUser) -> 'User':
-        user = cls(db_user.username, db_user.password, db_user.role, db_user.id)
+        user = cls(db_user.username, db_user.password, db_user.role, db_user.department, db_user.id)
         user.created_at = db_user.created_at
         user.is_active = db_user.is_active
         return user
@@ -53,19 +55,26 @@ class AuthManager:
         """Verify password"""
         return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
-    def register_user(self, username: str, password: str) -> Dict:
+    def register_user(self, username: str, password: str, department: str = None) -> Dict:
         """Đăng ký user mới"""
         db = next(get_db())
         try:
             existing_user = db.query(DBUser).filter(DBUser.username == username).first()
             if existing_user:
                 return {"success": False, "message": "Username đã tồn tại"}
+            
+            # Validate department
+            valid_departments = ["Sales", "Tài chính", "HR", None]
+            if department not in valid_departments:
+                return {"success": False, "message": "Department không hợp lệ"}
+            
             hashed_password = self.hash_password(password)
             new_user = DBUser(
                 id=str(uuid.uuid4()),
                 username=username,
                 password=hashed_password,
                 role='user',
+                department=department,
                 created_at=datetime.utcnow(),
                 is_active=True
             )
@@ -78,7 +87,8 @@ class AuthManager:
                 "user": {
                     "id": new_user.id,
                     "username": new_user.username,
-                    "role": new_user.role
+                    "role": new_user.role,
+                    "department": new_user.department
                 }
             }
         except Exception as e:
@@ -112,7 +122,8 @@ class AuthManager:
                 "user": {
                     "id": user.id,
                     "username": user.username,
-                    "role": user.role
+                    "role": user.role,
+                    "department": user.department
                 }
             }
 
@@ -127,6 +138,7 @@ class AuthManager:
             "user_id": user.id,
             "username": user.username,
             "role": user.role,
+            "department": user.department,
             "exp": datetime.utcnow() + timedelta(hours=24)  # Token hết hạn sau 24h
         }
         return jwt.encode(payload, self.secret_key, algorithm="HS256")
@@ -208,6 +220,28 @@ class AuthManager:
         finally:
             db.close()
 
+    def update_user_department(self, user_id: str, new_department: str) -> Dict:
+        """Cập nhật department của user (chỉ admin)"""
+        db = next(get_db())
+        try:
+            user = db.query(DBUser).filter(DBUser.id == user_id).first()
+            if not user:
+                return {"success": False, "message": "User không tồn tại"}
+            
+            valid_departments = ["Sales", "Tài chính", "HR", None]
+            if new_department not in valid_departments:
+                return {"success": False, "message": "Department không hợp lệ"}
+            
+            user.department = new_department
+            db.commit()
+            return {"success": True, "message": "Cập nhật department thành công"}
+
+        except Exception as e:
+            db.rollback()
+            return {"success": False, "message": f"Lỗi khi cập nhật department: {str(e)}"}
+        finally:
+            db.close()
+
     def get_all_users(self) -> List[Dict]:
         """Lấy danh sách tất cả users (chỉ admin)"""
         db = next(get_db())
@@ -218,6 +252,7 @@ class AuthManager:
                     "id": user.id,
                     "username": user.username,
                     "role": user.role,
+                    "department": user.department,
                     "created_at": user.created_at.isoformat() if user.created_at else None,
                     "is_active": user.is_active
                 }
@@ -262,3 +297,30 @@ def require_admin(f):
             return jsonify({'error': 'Chỉ admin mới được phép thực hiện thao tác này'}), 403
         return f(*args, **kwargs)
     return decorated_function 
+
+def require_department_access(department: str = None):
+    """Decorator kiểm tra quyền truy cập theo department"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            user = getattr(request, 'user', None)
+            if not user:
+                return jsonify({'error': 'Token không hợp lệ'}), 401
+            
+            user_role = user.get('role')
+            user_department = user.get('department')
+            
+            # Admin có quyền truy cập tất cả
+            if user_role == 'admin':
+                return f(*args, **kwargs)
+            
+            # User thường chỉ có quyền truy cập department của mình
+            if user_role == 'user':
+                if department and user_department != department:
+                    return jsonify({'error': 'Không có quyền truy cập department này'}), 403
+                return f(*args, **kwargs)
+            
+            return jsonify({'error': 'Không có quyền truy cập'}), 403
+        
+        return decorated_function
+    return decorator 

@@ -8,6 +8,7 @@ Swagger documentation đã được cải thiện đầy đủ cho tất cả c�
 - Request/Response schemas
 - Examples cho tất cả responses
 - Error handling
+- Security definitions
 
 ## Cách truy cập Swagger UI
 
@@ -22,17 +23,31 @@ python app.py
 http://localhost:5000/apidocs/
 ```
 
+## Cấu hình Swagger
+
+Swagger đã được cấu hình với:
+- **Security**: JWT Bearer token authentication
+- **Tags**: Phân loại endpoints theo chức năng
+- **Schemes**: HTTP và HTTPS
+- **Base Path**: `/api`
+- **Version**: 1.0.0
+
 ## Các nhóm API (Tags)
 
-### 1. Auth
+### 1. Auth - Authentication
 - **POST** `/api/auth/login` - Đăng nhập
+- **POST** `/api/auth/register` - Đăng ký user mới
 - **GET** `/api/auth/profile` - Lấy thông tin profile
+
+### 2. Admin - Admin Management
 - **POST** `/api/admin/register_user` - Admin tạo user mới
 - **GET** `/api/admin/users` - Admin xem danh sách users
 - **PUT** `/api/admin/users/{user_id}` - Admin cập nhật user
 - **DELETE** `/api/admin/users/{user_id}` - Admin xóa user
+- **POST** `/api/admin/upload_file` - Admin upload file
+- **POST** `/api/admin/upload_files_batch` - Admin upload nhiều files
 
-### 2. Chat
+### 3. Chat - Chat Session Management
 - **POST** `/api/chat/sessions` - Tạo chat session mới
 - **GET** `/api/chat/sessions` - Lấy danh sách chat sessions
 - **GET** `/api/chat/sessions/{session_id}` - Lấy messages trong session
@@ -42,49 +57,37 @@ http://localhost:5000/apidocs/
 - **POST** `/api/chat` - Legacy chat endpoint
 - **POST** `/api/chat/enhanced` - Enhanced chat với tìm kiếm file
 
-### 3. Enhanced Chat
+### 4. Enhanced Chat - Enhanced Chat Features
 - **POST** `/api/chat/enhanced` - Enhanced chat với tích hợp tìm kiếm file và phân loại
 
-### 4. File
+### 5. File - File Management
 - **GET** `/api/user/files` - Lấy danh sách files của user
 - **POST** `/api/user/files` - Upload file
 - **GET** `/api/user/files/enhanced` - Lấy files với thông tin chi tiết
 - **GET** `/api/user/files/download/{file_id}` - Tải file
+- **DELETE** `/api/user/files/{file_id}` - Xóa file
+- **POST** `/api/user/files/batch` - Upload nhiều files
 - **POST** `/api/files/{file_id}/classify` - Phân loại file
 - **POST** `/api/files/classify/batch` - Phân loại nhiều files
 - **GET** `/api/files/groups` - Lấy danh sách nhóm files
 - **GET** `/api/files/{file_id}/metadata` - Lấy metadata file
 - **POST** `/api/files/metadata/batch` - Gửi metadata batch
+- **GET** `/api/files/download/export/{filename}` - Tải file export
 
-### 5. Search
+### 6. Search - File Search
 - **POST** `/api/search/files` - Tìm kiếm file
 - **GET** `/api/search/files/suggestions` - Gợi ý từ khóa tìm kiếm
 
-### 6. System
+### 7. System - System Status
 - **GET** `/api/system/status` - Kiểm tra trạng thái server
 - **GET** `/api/system/health` - Kiểm tra sức khỏe hệ thống
 
-### 7. Feedback 
-- **POST** `/api/feedback` - gửi feedback về classify tới server
+### 8. Agentic AI - Agentic AI Features
+- **POST** `/api/agentic_ai/process` - Xử lý với Agentic AI
+- **GET** `/api/agentic_ai/status` - Trạng thái Agentic AI
 
-**NOTE: Sau khi feedback thông tin feedback sẽ được lưu trong file src/data/feedback_store.json (không cần tạo file này, nếu file này rỗng thì nên xóa đi không sẽ gây lỗi)**
-
-request body: 
-```json
-{
-  "file_name": "sample.txt",
-  "original_group": "B",
-  "corrected_group": "E"
-}
-```
-
-response:
-```json
-{
-    "message": "Đã ghi nhận phản hồi"
-}
-```
-
+### 9. Feedback - Feedback System
+- **POST** `/api/feedback` - Gửi feedback về phân loại file
 
 ## Authentication
 
@@ -92,6 +95,15 @@ Hầu hết các API endpoints yêu cầu authentication bằng JWT Bearer token
 
 ```json
 Authorization: Bearer <your_jwt_token>
+```
+
+### Security Definition:
+```yaml
+Bearer:
+  type: apiKey
+  name: Authorization
+  in: header
+  description: JWT Authorization header using the Bearer scheme
 ```
 
 ### Cách lấy token:
@@ -109,7 +121,8 @@ Authorization: Bearer <your_jwt_token>
   "user": {
     "id": "123",
     "username": "user1",
-    "role": "user"
+    "role": "user",
+    "department": "Sales"
   }
 }
 ```
@@ -149,10 +162,10 @@ Authorization: Bearer <your_jwt_token>
 }
 ```
 
-### send message 
+### Enhanced Chat Response:
 ```json
 {
-    "chain_of_thought": "Quá trình AI (Artificial Intelligence) tìm kiếm và phân loại các file sử dụng hai giai đoạn chính: tìm kiếm và phân loại.\n\n1. Tìm kiếm: Quá trình này thực hiện bằng cách duyệt qua một thư mục hoặc hệ thống tập tin, tìm đến các file có tên đã được yêu cầu. Đây là một cuộc truy vấn dựa trên thông tin nhóm (folder name) hoặc thông tin chi tiết (file name).\n\n2. Phân loại: Quá trình phân loại có thể được thực hiện bằng cách sử dụng các phương pháp như Support Vector Machine, Decision Tree hoặc k-means clustering. Các phương pháp này sẽ sử dụng các thông tin mở rộng (metadata) của tập tin để xác định loại tập tin đó, ví dụ như phần mở rộng (extension), kích thước file, ngày sửa đổi và các thông tin khác. Ví dụ, các tập tin .txt có thể được xác định là tệp văn bản hoặc phỏng vấn.\n\nVới việc tìm kiếm và phân loại các file như trên, quá trình AI sẽ tiến hành tìm thấy các file có nội dung phỏng vấn (sample.txt) đã yêu cầu bằng cách duyệt qua thư mục hoặc hệ thống tập tin, và sử dụng phân tích kỹ thuật lý luận để xác định loại của các tệp.",
+    "chain_of_thought": "Quá trình AI tìm kiếm và phân loại các file...",
     "files": [
         {
             "classification": {
@@ -160,23 +173,9 @@ Authorization: Bearer <your_jwt_token>
                 "group_id": "B",
                 "group_name": "Tài liệu marketing",
                 "method": "ai_based",
-                "reason": "Contains information related to job interview, which is a common marketing term"
+                "reason": "Contains information related to job interview"
             },
             "download_url": "/api/user/files/download/3fc76dd4-4b53-4fa9-a529-c94aa5df05ea",
-            "match_score": 6,
-            "name": "sample.txt",
-            "type": "text/plain",
-            "uploaded_by": "c314b7c3-c63d-4f04-b707-390f104f0883"
-        },
-        {
-            "classification": {
-                "confidence": 0.8,
-                "group_id": "B",
-                "group_name": "Tài liệu marketing",
-                "method": "ai_based",
-                "reason": "Contains information related to job interview, which is a common marketing term"
-            },
-            "download_url": "/api/user/files/download/a1d191ea-b011-40b2-90b0-b44c7d723340",
             "match_score": 6,
             "name": "sample.txt",
             "type": "text/plain",
@@ -191,33 +190,33 @@ Authorization: Bearer <your_jwt_token>
                 "group_id": "B",
                 "group_name": "Tài liệu marketing",
                 "method": "ai_based",
-                "reason": "Contains information related to job interview, which is a common marketing term"
+                "reason": "Contains information related to job interview"
             },
             "cloud_result": {
-                "error": "Cloudinary API error: 400",
-                "response": "{\"error\":{\"message\":\"Invalid JSON\"}}",
-                "success": false
+                "success": false,
+                "error": "Cloudinary API error: 400"
             },
             "file_id": "3fc76dd4-4b53-4fa9-a529-c94aa5df05ea"
-        },
-        {
-            "classification": {
-                "confidence": 0.8,
-                "group_id": "B",
-                "group_name": "Tài liệu marketing",
-                "method": "ai_based",
-                "reason": "Contains information related to job interview, which is a common marketing term"
-            },
-            "cloud_result": {
-                "error": "Cloudinary API error: 400",
-                "response": "{\"error\":{\"message\":\"Invalid JSON\"}}",
-                "success": false
-            },
-            "file_id": "a1d191ea-b011-40b2-90b0-b44c7d723340"
         }
     ],
-    "response": "Đã tìm thấy 2 file, metadata đã gửi.\n1. sample.txt (text/plain) - Nhóm: Tài liệu marketing - [Tải về](/api/user/files/download/3fc76dd4-4b53-4fa9-a529-c94aa5df05ea)\n2. sample.txt (text/plain) - Nhóm: Tài liệu marketing - [Tải về](/api/user/files/download/a1d191ea-b011-40b2-90b0-b44c7d723340)\n",
+    "response": "Đã tìm thấy 2 file, metadata đã gửi.",
     "success": true
+}
+```
+
+### Feedback Request:
+```json
+{
+  "file_name": "sample.txt",
+  "original_group": "B",
+  "corrected_group": "E"
+}
+```
+
+### Feedback Response:
+```json
+{
+    "message": "Đã ghi nhận phản hồi"
 }
 ```
 
@@ -251,6 +250,13 @@ Authorization: Bearer <your_jwt_token>
 }
 ```
 
+### 413 Request Entity Too Large:
+```json
+{
+  "error": "File quá lớn, vượt quá giới hạn cho phép"
+}
+```
+
 ### 500 Internal Server Error:
 ```json
 {
@@ -260,20 +266,20 @@ Authorization: Bearer <your_jwt_token>
 
 ## Testing với Swagger UI
 
-1. **Test Authentication:**
-   - Click vào "Authorize" button ở đầu trang
-   - Nhập: `Bearer <your_token>`
-   - Click "Authorize"
+### 1. Authorize:
+- Click vào "Authorize" button ở đầu trang
+- Nhập: `Bearer <your_token>`
+- Click "Authorize"
 
-2. **Test Endpoints:**
-   - Chọn endpoint muốn test
-   - Click "Try it out"
-   - Điền parameters cần thiết
-   - Click "Execute"
+### 2. Test Endpoints:
+- Chọn endpoint muốn test
+- Click "Try it out"
+- Điền parameters cần thiết
+- Click "Execute"
 
-3. **View Responses:**
-   - Swagger sẽ hiển thị response với status code
-   - Có thể xem curl command để test từ terminal
+### 3. View Responses:
+- Swagger sẽ hiển thị response với status code
+- Có thể xem curl command để test từ terminal
 
 ## File Upload
 
@@ -282,6 +288,14 @@ Authorization: Bearer <your_jwt_token>
 - Type: `file`
 - Chọn file từ máy tính
 
+## Department Access Control
+
+Hệ thống hỗ trợ phân quyền theo department:
+- **Sales**: Chỉ xem files của Sales
+- **Tài chính**: Chỉ xem files của Tài chính  
+- **HR**: Chỉ xem files của HR
+- **Admin**: Xem tất cả files
+
 ## Tips
 
 1. **Luôn kiểm tra Authorization header** cho các protected endpoints
@@ -289,6 +303,7 @@ Authorization: Bearer <your_jwt_token>
 3. **Kiểm tra response status codes** để xử lý lỗi
 4. **Sử dụng examples** trong Swagger để hiểu format dữ liệu
 5. **Test từng endpoint** trước khi tích hợp vào ứng dụng
+6. **Kiểm tra department permissions** khi truy cập files
 
 ## Troubleshooting
 
@@ -302,7 +317,38 @@ Authorization: Bearer <your_jwt_token>
 - Validate data types
 - Kiểm tra file size limits
 
+### Lỗi 403 Forbidden:
+- Kiểm tra user role (admin/user)
+- Kiểm tra department permissions
+- Kiểm tra endpoint access rights
+
+### Lỗi 413 Request Entity Too Large:
+- Giảm kích thước file upload
+- Kiểm tra server file size limits
+
 ### Lỗi 500 Internal Server Error:
 - Kiểm tra server logs
 - Đảm bảo database connection
-- Kiểm tra file system permissions 
+- Kiểm tra file system permissions
+
+## API Versioning
+
+- **Current Version**: 1.0.0
+- **Base Path**: `/api`
+- **Future versions**: Sẽ sử dụng `/api/v2/` format
+
+## Rate Limiting
+
+Hiện tại chưa có rate limiting, nhưng có thể được thêm trong tương lai:
+- Login attempts: 5 per minute
+- File uploads: 10 per minute
+- API calls: 100 per minute
+
+## Security Best Practices
+
+1. **Always use HTTPS** in production
+2. **Validate all inputs** before processing
+3. **Sanitize file uploads** to prevent malicious files
+4. **Use strong passwords** for admin accounts
+5. **Regular token rotation** for security
+6. **Monitor API usage** for suspicious activity 

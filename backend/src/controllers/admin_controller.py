@@ -22,7 +22,7 @@ def get_users():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
     responses:
       200:
         description: Lấy danh sách users thành công
@@ -77,6 +77,7 @@ def get_users():
                 'id': user.id,
                 'username': user.username,
                 'role': user.role,
+                'department': user.department,
                 'created_at': user.created_at.isoformat() if user.created_at else None
             })
         
@@ -105,7 +106,7 @@ def update_user_role(user_id):
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
       - name: user_id
         in: path
         type: string
@@ -121,7 +122,7 @@ def update_user_role(user_id):
           properties:
             role:
               type: string
-              description: Role mới (user/admin)
+              description: "Role mới - user hoặc admin"
               example: "admin"
     responses:
       200:
@@ -158,7 +159,85 @@ def update_user_role(user_id):
             'user': {
                 'id': user.id,
                 'username': user.username,
-                'role': user.role
+                'role': user.role,
+                'department': user.department
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+@admin_bp.route('/admin/users/<user_id>/department', methods=['PUT'])
+@require_auth
+@require_admin
+def update_user_department(user_id):
+    """
+    Cập nhật department của user (Admin only)
+    ---
+    tags:
+      - Admin
+    parameters:
+      - name: Authorization
+        in: header
+        type: string
+        required: true
+        description: "Bearer token JWT"
+      - name: user_id
+        in: path
+        type: string
+        required: true
+        description: ID của user
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - department
+          properties:
+            department:
+              type: string
+              description: "Department mới - Sales, Tài chính, HR"
+              example: "Sales"
+    responses:
+      200:
+        description: Cập nhật department thành công
+      400:
+        description: Dữ liệu không hợp lệ
+      401:
+        description: Không xác thực hoặc không có quyền admin
+      404:
+        description: User không tồn tại
+      500:
+        description: Lỗi server
+    """
+    try:
+        data = request.json
+        new_department = data.get('department')
+        
+        valid_departments = ["Sales", "Tài chính", "HR", None]
+        if new_department not in valid_departments:
+            return jsonify({'error': 'Department phải là "Sales", "Tài chính", "HR" hoặc null'}), 400
+        
+        db = next(get_db())
+        user = db.query(DBUser).filter(DBUser.id == user_id).first()
+        
+        if not user:
+            return jsonify({'error': 'User không tồn tại'}), 404
+        
+        user.department = new_department
+        db.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Cập nhật department thành công: {user.username} -> {new_department}',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'role': user.role,
+                'department': user.department
             }
         })
         
@@ -181,7 +260,7 @@ def create_user():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
       - name: body
         in: body
         required: true
@@ -201,7 +280,7 @@ def create_user():
               example: "password123"
             role:
               type: string
-              description: Role (mặc định: user)
+              description: "Role - mặc định user"
               example: "user"
     responses:
       201:
@@ -280,7 +359,7 @@ def delete_user(user_id):
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
       - name: user_id
         in: path
         type: string
@@ -336,16 +415,16 @@ def get_all_files():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
       - name: page
         in: query
         type: integer
-        description: Số trang (mặc định: 1)
+        description: "Số trang - mặc định 1"
         example: 1
       - name: limit
         in: query
         type: integer
-        description: Số items per page (mặc định: 10)
+        description: "Số items per page - mặc định 10"
         example: 10
     responses:
       200:
@@ -403,7 +482,7 @@ def get_system_stats():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
     responses:
       200:
         description: Lấy thống kê thành công

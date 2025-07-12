@@ -37,6 +37,17 @@ class User(Base):
     username = Column(String(50), unique=True, index=True, nullable=False)
     password = Column(String(255), nullable=False)
     role = Column(String(20), default="user", nullable=False)
+    department = Column(String(50), nullable=True)  # Sales, Tài chính, HR
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+
+# Department model
+class Department(Base):
+    __tablename__ = "departments"
+    
+    id = Column(String(36), primary_key=True, index=True)
+    name = Column(String(50), unique=True, nullable=False)
+    description = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
 
@@ -51,6 +62,7 @@ class File(Base):
     file_size = Column(Integer, nullable=False)
     file_type = Column(String(100), nullable=False)
     uploaded_by = Column(String(50), nullable=False)
+    department = Column(String(50), nullable=True)  # Department của file
     uploaded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
 

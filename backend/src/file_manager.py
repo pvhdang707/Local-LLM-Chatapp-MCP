@@ -46,7 +46,7 @@ class FileManager:
         except Exception as e:
             print(f"Error saving files database: {e}")
 
-    def add_file(self, file, uploaded_by: str) -> Dict:
+    def add_file(self, file, uploaded_by: str, department: str = None) -> Dict:
         """Thêm file mới với phân loại và index"""
         try:
             if not file or file.filename == '':
@@ -97,6 +97,7 @@ class FileManager:
                     file_size=os.path.getsize(file_path),
                     file_type=file.content_type or "unknown",
                     uploaded_by=uploaded_by,
+                    department=department,
                     uploaded_at=datetime.utcnow(),
                     is_active=True
                 )
@@ -502,6 +503,36 @@ class FileManager:
                 
         except Exception as e:
             return {"success": False, "message": f"Lỗi khi dọn dẹp files: {str(e)}"}
+
+    def get_files_by_department(self, department: str) -> List[Dict]:
+        """Lấy danh sách files theo department"""
+        db = next(get_db())
+        try:
+            files = db.query(DBFile).filter(
+                DBFile.department == department,
+                DBFile.is_active == True
+            ).all()
+            
+            return [
+                {
+                    "id": file.id,
+                    "original_name": file.original_name,
+                    "stored_name": file.stored_name,
+                    "file_path": file.file_path,
+                    "file_size": file.file_size,
+                    "file_type": file.file_type,
+                    "uploaded_by": file.uploaded_by,
+                    "department": file.department,
+                    "uploaded_at": file.uploaded_at.isoformat() if file.uploaded_at else None,
+                    "is_active": file.is_active
+                }
+                for file in files
+            ]
+        except Exception as e:
+            print(f"Error getting files by department: {e}")
+            return []
+        finally:
+            db.close()
 
 # Khởi tạo FileManager
 file_manager = FileManager() 

@@ -24,7 +24,7 @@ def chat_enhanced():
         in: header
         type: string
         required: true
-        description: Bearer token (JWT)
+        description: "Bearer token JWT"
         example: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTIzIiwidXNlcm5hbWUiOiJ1c2VyMSIsInJvbGUiOiJ1c2VyIiwiZXhwIjoxNzM1Njg5NjAwfQ.example_signature"
       - name: body
         in: body
@@ -67,7 +67,7 @@ def chat_enhanced():
               example: "2024-01-01T12:00:00Z"
             related_files:
               type: array
-              description: Danh sách files liên quan (nếu search_files=true)
+              description: "Danh sách files liên quan - nếu search_files=true"
               items:
                 type: object
                 properties:
@@ -85,7 +85,7 @@ def chat_enhanced():
                     example: 0.85
                   classification:
                     type: object
-                    description: Thông tin phân loại (nếu include_classification=true)
+                    description: "Thông tin phân loại - nếu include_classification=true"
                     properties:
                       group_name:
                         type: string
@@ -102,7 +102,7 @@ def chat_enhanced():
                         example: true
             context:
               type: object
-              description: Thông tin context (nếu có files liên quan)
+              description: "Thông tin context - nếu có files liên quan"
               properties:
                 files_found:
                   type: integer
