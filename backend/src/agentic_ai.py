@@ -10,6 +10,8 @@ from src.file_classifier import file_classifier
 from src.cloud_integration import cloud_integration
 from src.file_manager import file_manager
 import os
+from src.feedback_store import load_feedback
+from src.file_reasoner import generate_chain_of_thought
 
 class AgenticAI:
     def __init__(self):
@@ -150,10 +152,12 @@ class AgenticAI:
         }
     
     def execute_plan(self, plan: Dict, user_id: str, user_role: str) -> Dict:
-        """Thực hiện kế hoạch hành động"""
+        """Thực hiện kế hoạch hành động với CoT và RLHF"""
         try:
             execution_results = []
             current_files = []
+            cot_steps = []  # Ghi lại giải thích từng bước
+            feedback_data = load_feedback()  # RLHF: lấy feedback người dùng
             
             # Sắp xếp plan theo thứ tự
             sorted_plan = sorted(plan['plan'], key=lambda x: x['order'])
@@ -163,12 +167,13 @@ class AgenticAI:
                 parameters = step['parameters']
                 description = step['description']
                 
-                print(f"🔧 Thực hiện: {description}")
+                cot_steps.append(f"Bước: {description}")
                 
                 # Thực hiện từng action
                 if action == 'search_files':
                     result = self._execute_search_files(parameters, user_id, user_role)
                     current_files = result.get('files', [])
+                    cot_steps.append(f"- Đã tìm thấy {len(current_files)} file phù hợp với truy vấn '{parameters.get('query','')}'.")
                     execution_results.append({
                         'step': step,
                         'result': result,
@@ -179,7 +184,37 @@ class AgenticAI:
                     # Sử dụng file_ids từ kết quả search trước đó
                     if current_files:
                         file_ids = [f['id'] for f in current_files]
-                        result = self._execute_classify_files(file_ids)
+                        classifications = []
+                        for file_obj in current_files:
+                            file_id = file_obj['id']
+                            file_name = file_obj.get('name') or file_obj.get('original_name')
+                            # RLHF: Ưu tiên dùng feedback nếu có
+                            corrected = feedback_data.get(file_name)
+                            if corrected:
+                                classification = {
+                                    "group_name": corrected["corrected_group"],
+                                    "note": "Dựa trên phản hồi người dùng"
+                                }
+                                cot_steps.append(f"- File '{file_name}' được phân loại lại thành '{corrected['corrected_group']}' theo phản hồi người dùng.")
+                            else:
+                                # Phân loại AI như cũ
+                                file_path = file_obj.get('file_path')
+                                if not file_path:
+                                    # Lấy file_path từ file_manager nếu thiếu
+                                    from src.file_manager import file_manager
+                                    file_info = file_manager.get_file_by_id(file_id)
+                                    file_path = file_info['file_path'] if file_info else None
+                                classification = file_classifier.classify_file(file_path, file_name)
+                                cot_steps.append(f"- File '{file_name}' được AI phân loại thành '{classification.get('group_name','?')}'.")
+                            classifications.append({
+                                'file_id': file_id,
+                                'classification': classification
+                            })
+                        result = {
+                            'action': 'classify_files',
+                            'total_files': len(file_ids),
+                            'classifications': classifications
+                        }
                         execution_results.append({
                             'step': step,
                             'result': result,
@@ -190,6 +225,7 @@ class AgenticAI:
                     if current_files:
                         file_ids = [f['id'] for f in current_files]
                         result = self._execute_extract_metadata(file_ids)
+                        cot_steps.append(f"- Đã trích xuất metadata cho {len(file_ids)} file.")
                         execution_results.append({
                             'step': step,
                             'result': result,
@@ -200,6 +236,7 @@ class AgenticAI:
                     if current_files:
                         file_ids = [f['id'] for f in current_files]
                         result = self._execute_export_metadata(file_ids, parameters.get('output_format', 'excel'))
+                        cot_steps.append(f"- Đã xuất metadata ra file {result.get('filename','?')}.")
                         execution_results.append({
                             'step': step,
                             'result': result,
@@ -210,6 +247,7 @@ class AgenticAI:
                     if current_files:
                         file_ids = [f['id'] for f in current_files]
                         result = self._execute_upload_to_cloud(file_ids)
+                        cot_steps.append(f"- Đã upload metadata của {len(file_ids)} file lên cloud.")
                         execution_results.append({
                             'step': step,
                             'result': result,
@@ -219,14 +257,24 @@ class AgenticAI:
             # Tạo summary
             summary = self._create_execution_summary(execution_results, current_files)
             
+            # Sinh chain of thought (CoT) tổng hợp
+            chain_of_thought = '\n'.join(cot_steps)
+            # Nếu là tìm kiếm file, có thể sinh giải thích nâng cao bằng LLM
+            if any(s['step']['action'] == 'search_files' for s in execution_results):
+                try:
+                    cot_llm = generate_chain_of_thought(current_files, plan.get('user_request',''))
+                    chain_of_thought += f"\n\nAI reasoning:\n{cot_llm}"
+                except Exception as e:
+                    chain_of_thought += f"\n[WARN] Không sinh được giải thích nâng cao: {e}"
+
             return {
                 'success': True,
                 'execution_results': execution_results,
                 'summary': summary,
                 'total_steps': len(execution_results),
-                'completed_at': datetime.utcnow().isoformat()
+                'completed_at': datetime.utcnow().isoformat(),
+                'chain_of_thought': chain_of_thought
             }
-            
         except Exception as e:
             return {
                 'success': False,
@@ -246,6 +294,9 @@ class AgenticAI:
             search_type=search_type,
             limit=10
         )
+        # Bổ sung download_url cho từng file
+        for file in results:
+            file['download_url'] = f"/api/user/files/download/{file['id']}"
         
         return {
             'action': 'search_files',

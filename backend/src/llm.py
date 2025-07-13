@@ -21,6 +21,21 @@ class RagDataContext(TypedDict):
     file_documents: List[Document]
     chat_context: str
 
+class LLMManager:
+    """Manager class for LLM operations"""
+    
+    def __init__(self):
+        self.llm = create_llm(model=OllamaConfig.RagModel)
+    
+    def generate_response(self, prompt: str) -> str:
+        """Generate a response using the LLM"""
+        try:
+            messages = [HumanMessage(content=prompt)]
+            response = self.llm.invoke(messages)
+            return response.content
+        except Exception as e:
+            return f"Lỗi tạo phản hồi: {str(e)}"
+
 def create_llm(model="mistral", temperature=0, format=''):
     return ChatOllama(
         model=model,
@@ -31,6 +46,7 @@ def create_llm(model="mistral", temperature=0, format=''):
 
 vectorstore = vectordb.init_vector_store()
 llm = create_llm(model=OllamaConfig.RagModel)
+llm_manager = LLMManager()
 
 def load_file_document(ctx: RagDataContext) -> RagDataContext:
     urls = ctx.get('file_urls',[])

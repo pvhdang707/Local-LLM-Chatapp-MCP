@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const ProtectedRoute = ({ children, requireAdmin = false, requireUser = false }) => {
+const ProtectedRoute = ({ children, requireAdmin = false, requireUser = false, requireDepartment = null }) => {
   const { user, isAdmin, loading } = useAuth();
   const location = useLocation();
 
@@ -30,6 +30,11 @@ const ProtectedRoute = ({ children, requireAdmin = false, requireUser = false })
   // Nếu cần quyền user thường nhưng user là admin
   if (requireUser && isAdmin) {
     return <Navigate to="/admin" replace />;
+  }
+
+  // Kiểm tra department access - MỚI
+  if (requireDepartment && user.department !== requireDepartment && !isAdmin) {
+    return <Navigate to="/chat" replace />;
   }
 
   return children;

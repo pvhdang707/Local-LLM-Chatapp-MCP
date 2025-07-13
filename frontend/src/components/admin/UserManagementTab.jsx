@@ -78,7 +78,7 @@ const UserManagementTab = ({
     });
   };
 
-  // Search users
+  // Search users - cập nhật để hỗ trợ department
   const applyUserSearch = () => {
     if (!userSearchTerm.trim()) {
       setFilteredUsers(users);
@@ -89,7 +89,8 @@ const UserManagementTab = ({
     const filtered = users.filter(user => 
       user.username.toLowerCase().includes(searchTerm) ||
       user.id.toString().includes(searchTerm) ||
-      user.role.toLowerCase().includes(searchTerm)
+      user.role.toLowerCase().includes(searchTerm) ||
+      (user.department && user.department.toLowerCase().includes(searchTerm)) // Thêm search theo department
     );
     
     setFilteredUsers(filtered);

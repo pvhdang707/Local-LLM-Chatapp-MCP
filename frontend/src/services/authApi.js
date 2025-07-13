@@ -32,6 +32,7 @@ export const login = async (username, password) => {
       localStorage.setItem('username', data.user.username);
       localStorage.setItem('userRole', data.user.role);
       localStorage.setItem('userId', data.user.id);
+      localStorage.setItem('userDepartment', data.user.department || ''); // Thêm department
     }
 
     return data;
@@ -154,6 +155,7 @@ export const logout = () => {
   localStorage.removeItem('username');
   localStorage.removeItem('userRole');
   localStorage.removeItem('userId');
+  localStorage.removeItem('userDepartment'); // Thêm xóa department
 };
 
 // Kiểm tra token có hợp lệ không
@@ -181,6 +183,7 @@ export const getCurrentUser = () => {
   const username = localStorage.getItem('username');
   const role = localStorage.getItem('userRole');
   const userId = localStorage.getItem('userId');
+  const department = localStorage.getItem('userDepartment'); // Thêm department
   
   if (!username || !role || !userId) {
     return null;
@@ -190,6 +193,7 @@ export const getCurrentUser = () => {
     id: userId,
     username,
     role,
+    department, // Thêm department
     isAdmin: role === 'admin'
   };
 }; 

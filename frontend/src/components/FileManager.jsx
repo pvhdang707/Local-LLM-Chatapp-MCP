@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { 
-  getUserFilesEnhanced, 
+  getUserFilesComplete, 
   deleteFile, 
   downloadFile, 
   getFileMetadata,
-  getFileGroups 
+  getFileGroups,
+  classifyFile,
+  classifyFilesBatch,
+  searchFiles
 } from '../services/fileApi';
 import Notification from './Notification';
 import ConfirmModal from './ConfirmModal';
@@ -33,25 +36,31 @@ const ICONS = {
   chart: (
     <svg className="w-7 h-7 text-pink-400" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M3 17v-2a4 4 0 014-4h2a4 4 0 014 4v2" /><rect x="13" y="13" width="8" height="8" rx="2" /></svg>
   ),
-  cloud: (
-    <svg className="w-5 h-5 inline text-green-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 16a4 4 0 10-8 0H5a5 5 0 0110 0h2a3 3 0 100-6 5.978 5.978 0 00-1.528-3.528A5.978 5.978 0 0012 4a6 6 0 00-6 6c0 .34.03.674.09 1H5a3 3 0 100 6h2z" /></svg>
-  ),
   download: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 17v1a2 2 0 002 2h12a2 2 0 002-2v-1" /><path strokeLinecap="round" strokeLinejoin="round" d="M7 10l5 5m0 0l5-5m-5 5V4" /></svg>
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
   ),
   trash: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
   ),
-  spinner: (
-    <svg className="w-5 h-5 animate-spin text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" /><path className="opacity-75" d="M4 12a8 8 0 018-8v8z" /></svg>
-  ),
   refresh: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582M20 20v-5h-.581M5.582 9A7.974 7.974 0 014 12c0 4.418 3.582 8 8 8a7.974 7.974 0 006.418-3M18.418 15A7.974 7.974 0 0020 12c0-4.418-3.582-8-8-8a7.974 7.974 0 00-6.418 3" /></svg>
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+  ),
+  spinner: (
+    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+  ),
+  department: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+  ),
+  classification: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 11h.01m-.01 4h.01m8-8h.01m.01 4h.01m-.01 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+  ),
+  cloud: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" /></svg>
   )
 };
 
 const FileManager = ({ onAction }) => {
-  const { user } = useAuth();
+  const { user, userDepartment, isAdmin } = useAuth();
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -62,6 +71,10 @@ const FileManager = ({ onAction }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [confirmDelete, setConfirmDelete] = useState({ open: false, fileId: null });
   const [notification, setNotification] = useState({ open: false, message: '', type: '' });
+  const [classifyingFile, setClassifyingFile] = useState(null);
+  const [showDepartment, setShowDepartment] = useState(true);
+  const [showClassification, setShowClassification] = useState(true);
+  const [showCloudMetadata, setShowCloudMetadata] = useState(true);
 
   // Load files và groups
   useEffect(() => {
@@ -72,7 +85,7 @@ const FileManager = ({ onAction }) => {
   const loadFiles = async () => {
     try {
       setLoading(true);
-      const filesData = await getUserFilesEnhanced();
+      const filesData = await getUserFilesComplete();
       setFiles(filesData);
     } catch (error) {
       setError(error.message);
@@ -160,15 +173,32 @@ const FileManager = ({ onAction }) => {
   };
 
   // Handle download file
-  const handleDownloadFile = async (fileId) => {
+  const handleDownloadFile = async (fileId, filename) => {
     try {
       setDownloadingFile(fileId);
-      await downloadFile(fileId);
+      await downloadFile(fileId, filename);
       if (onAction) onAction('Tải xuống file thành công!', 'success');
     } catch (error) {
       if (onAction) onAction('Lỗi khi tải xuống file: ' + error.message, 'error');
     } finally {
       setDownloadingFile(null);
+    }
+  };
+
+  // Handle classify file
+  const handleClassifyFile = async (fileId) => {
+    try {
+      setClassifyingFile(fileId);
+      await classifyFile(fileId);
+      // Reload files để cập nhật thông tin phân loại
+      await loadFiles();
+      setNotification({ open: true, message: 'Phân loại file thành công!', type: 'success' });
+      if (onAction) onAction('Phân loại file thành công!', 'success');
+    } catch (error) {
+      setNotification({ open: true, message: 'Lỗi khi phân loại file: ' + error.message, type: 'error' });
+      if (onAction) onAction('Lỗi khi phân loại file: ' + error.message, 'error');
+    } finally {
+      setClassifyingFile(null);
     }
   };
 
@@ -182,7 +212,8 @@ const FileManager = ({ onAction }) => {
     const matchesGroup = selectedGroup === 'all' || file.classification?.group_id === selectedGroup;
     const matchesSearch = searchTerm === '' || 
       file.original_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      file.classification?.group_name?.toLowerCase().includes(searchTerm.toLowerCase());
+      file.classification?.group_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      file.department?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesGroup && matchesSearch;
   });
 
@@ -229,62 +260,104 @@ const FileManager = ({ onAction }) => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Search and Filter - Fixed at top */}
-      <div className="space-y-3 mb-4 flex-shrink-0">
-        {/* Search Bar */}
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Tìm kiếm file..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 py-2 pl-10 pr-10 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder:text-xs sm:placeholder:text-sm"
-          />
-          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-            {ICONS.search}
+      {/* Department Info Banner */}
+      {userDepartment && !isAdmin && (
+        <div className="bg-blue-50 border-b border-blue-200 p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <span className="text-blue-600">📋</span>
+              <div>
+                <p className="text-sm font-medium text-blue-900">
+                  Phòng ban của bạn: <span className="font-bold">{userDepartment}</span>
+                </p>
+                <p className="text-xs text-blue-700 mt-1">
+                  Bạn có thể xem file của bạn và file trong phòng ban này
+                </p>
+              </div>
+            </div>
+            {/* File statistics */}
+            {files.length > 0 && (
+              <div className="flex items-center space-x-2 text-xs">
+                <span className="text-blue-600 font-medium">Tổng: {files.length}</span>
+                {files.some(f => f.source === 'user') && (
+                  <span className="text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
+                    Của bạn: {files.filter(f => f.source === 'user').length}
+                  </span>
+                )}
+                {files.some(f => f.source === 'department' || f.source === 'both') && (
+                  <span className="text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                    Phòng ban: {files.filter(f => f.source === 'department' || f.source === 'both').length}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
-          {searchTerm && (
-            <button
-              onClick={clearSearch}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-              title="Xóa tìm kiếm"
-            >
-              {ICONS.close}
-            </button>
-          )}
         </div>
+      )}
 
-        {/* Group Filter */}
-        <div className="flex flex-wrap gap-1 sm:gap-2">
-          <button
-            onClick={() => setSelectedGroup('all')}
-            className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium transition-colors ${
-              selectedGroup === 'all'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            Tất cả ({files.length})
-          </button>
-          {groups.map(group => (
-            <button
-              key={group.group_id}
-              onClick={() => setSelectedGroup(group.group_id)}
-              className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium transition-colors ${
-                selectedGroup === group.group_id
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
+      {/* Admin Info Banner */}
+      {isAdmin && (
+        <div className="bg-purple-50 border-b border-purple-200 p-4 mb-4">
+          <div className="flex items-center space-x-2">
+            <span className="text-purple-600">👑</span>
+            <div>
+              <p className="text-sm font-medium text-purple-900">
+                Quyền Admin
+              </p>
+              <p className="text-xs text-purple-700 mt-1">
+                Bạn có thể xem và quản lý tất cả file trong hệ thống
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Search and Filter - Fixed at top */}
+      <div className="bg-white border-b border-gray-200 p-4 flex-shrink-0">
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Search */}
+          <div className="flex-1 relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              {ICONS.search}
+            </div>
+            <input
+              type="text"
+              placeholder="Tìm kiếm file..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            />
+            {searchTerm && (
+              <button
+                onClick={clearSearch}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              >
+                {ICONS.close}
+              </button>
+            )}
+          </div>
+
+          {/* Group Filter */}
+          <div className="flex-shrink-0">
+            <select
+              value={selectedGroup}
+              onChange={(e) => setSelectedGroup(e.target.value)}
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             >
-              <span className="hidden sm:inline">{group.name}</span>
-              <span className="sm:hidden">{group.name.split(' ')[0]}</span>
-              ({files.filter(f => f.classification?.group_id === group.group_id).length})
-            </button>
-          ))}
+              <option value="all">Tất cả nhóm</option>
+              {groups.map(group => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          
         </div>
       </div>
 
-      {/* Files List - Scrollable area */}
+      {/* File List */}
       <div className="flex-1 overflow-hidden">
         {filteredFiles.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
@@ -295,12 +368,17 @@ const FileManager = ({ onAction }) => {
             <p className="text-sm">
               {searchTerm ? 'Thử tìm kiếm với từ khóa khác' : 'Hãy upload file đầu tiên của bạn!'}
             </p>
+            {userDepartment && !isAdmin && (
+              <p className="text-xs text-gray-400 mt-2">
+                Chỉ hiển thị file trong phòng ban: {userDepartment}
+              </p>
+            )}
           </div>
         ) : (
           <div className="h-full overflow-y-auto pr-2 space-y-3 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
             {filteredFiles.map(file => (
               <div key={file.id} className="rounded-lg p-4 hover:bg-gray-100 transition-colors border border-gray-200 bg-white">
-                <div className="flex items-start gap-3">
+                <div className="flex items-start space-x-3">
                   {/* File Icon */}
                   <div className="flex-shrink-0 text-2xl mt-1">
                     {getFileIcon(file.original_name)}
@@ -330,37 +408,84 @@ const FileManager = ({ onAction }) => {
                       <span className="flex-shrink-0 sm:hidden">{formatDate(file.uploaded_at).split(' ')[0]}</span>
                     </div>
 
-                    {/* Classification */}
-                    {file.classification && (
-                      <div className="mt-2 flex items-center space-x-2 flex-wrap">
-                        <span className={`px-2 py-1 text-xs rounded-full border ${getGroupColor(file.classification.group_id)} flex-shrink-0`}>
-                          <span className="hidden sm:inline">Nhóm {file.classification.group_id}: {file.classification.group_name}</span>
-                          <span className="sm:hidden">Nhóm {file.classification.group_id}</span>
+                    {/* Department Info */}
+                    {showDepartment && file.department && (
+                      <div className="mt-2 flex items-center space-x-1">
+                        {ICONS.department}
+                        <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                          {file.department}
                         </span>
-                        <span className="text-xs text-gray-500 flex-shrink-0">
-                          ({Math.round(file.classification.confidence * 100)}%)
-                        </span>
+                        {/* Source indicator */}
+                        {file.source && (
+                          <span className={`text-xs px-2 py-1 rounded-full ml-1 ${
+                            file.source === 'user' 
+                              ? 'bg-purple-50 text-purple-600 border border-purple-200'
+                              : file.source === 'department'
+                              ? 'bg-green-50 text-green-600 border border-green-200'
+                              : 'bg-blue-50 text-blue-600 border border-blue-200'
+                          }`}>
+                            {file.source === 'user' ? 'Của bạn' : 
+                             file.source === 'department' ? 'Phòng ban' : 'Cả hai'}
+                          </span>
+                        )}
                       </div>
                     )}
 
-                    {/* Cloud Status */}
-                    {file.cloud_metadata && file.cloud_metadata.success && (
-                      <div className="mt-1 text-xs text-green-600 flex items-center gap-1">
-                        {ICONS.cloud} <span>Đã đồng bộ với cloud</span>
+                    {/* Classification Info */}
+                    {showClassification && file.classification && (
+                      <div className="mt-2 flex items-center space-x-2">
+                        {ICONS.classification}
+                        <span className={`text-xs px-2 py-1 rounded-full border ${getGroupColor(file.classification.group_id)}`}>
+                          {file.classification.group_name}
+                          {file.classification.confidence && (
+                            <span className="ml-1 text-xs opacity-75">
+                              ({Math.round(file.classification.confidence * 100)}%)
+                            </span>
+                          )}
+                        </span>
+                        {file.classification.keywords && file.classification.keywords.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {file.classification.keywords.slice(0, 3).map((keyword, index) => (
+                              <span key={index} className="text-xs bg-gray-100 text-gray-600 px-1 py-0.5 rounded">
+                                {keyword}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Cloud Metadata */}
+                    {showCloudMetadata && file.cloud_metadata && (
+                      <div className="mt-2 flex items-center space-x-1">
+                        {ICONS.cloud}
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          file.cloud_metadata.synced 
+                            ? 'bg-green-50 text-green-600 border border-green-200' 
+                            : 'bg-yellow-50 text-yellow-600 border border-yellow-200'
+                        }`}>
+                          {file.cloud_metadata.synced ? 'Đã đồng bộ' : 'Chưa đồng bộ'}
+                          {file.cloud_metadata.last_sync && (
+                            <span className="ml-1 opacity-75">
+                              ({formatDate(file.cloud_metadata.last_sync).split(' ')[0]})
+                            </span>
+                          )}
+                        </span>
                       </div>
                     )}
                   </div>
 
-                  {/* Actions - Fixed width */}
+                  {/* Actions */}
                   <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
                     <button
-                      onClick={() => handleDownloadFile(file.id)}
+                      onClick={() => handleDownloadFile(file.id, file.original_name)}
                       disabled={downloadingFile === file.id}
                       className="p-1.5 sm:p-2 text-green-600 hover:bg-green-100 rounded transition-colors disabled:opacity-50"
                       title="Tải xuống file"
                     >
                       {downloadingFile === file.id ? ICONS.spinner : ICONS.download}
                     </button>
+                    
                     
                     <button
                       onClick={() => handleDeleteFile(file.id)}

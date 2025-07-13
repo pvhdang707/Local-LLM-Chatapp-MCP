@@ -95,7 +95,8 @@ class FileSearchEngine:
                     'uploaded_by': file_data['uploaded_by'],
                     'uploaded_at': file_data['uploaded_at'],
                     'match_type': 'name',
-                    'match_score': self.calculate_name_match_score(query_lower, original_name)
+                    'match_score': self.calculate_name_match_score(query_lower, original_name),
+                    'content_preview': file_data['content_preview'][:500] + "..." if len(file_data['content_preview']) > 500 else file_data['content_preview']
                 })
         
         # Sắp xếp theo độ phù hợp
@@ -130,7 +131,7 @@ class FileSearchEngine:
                     'uploaded_at': file_data['uploaded_at'],
                     'match_type': 'content',
                     'match_score': content_match + keyword_match * 2,
-                    'content_preview': file_data['content_preview'][:200] + "..."
+                    'content_preview': file_data['content_preview'][:500] + "..." if len(file_data['content_preview']) > 500 else file_data['content_preview']
                 })
         # Sắp xếp theo độ phù hợp
         results.sort(key=lambda x: x['match_score'], reverse=True)

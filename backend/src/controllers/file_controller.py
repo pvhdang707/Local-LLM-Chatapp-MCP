@@ -50,7 +50,6 @@ def get_user_files():
         if user_role == 'admin':
             files = file_manager.get_all_files()
         else:
-            # User chỉ xem được file trong department của mình
             files = file_manager.get_files_by_department(user_department)
         return jsonify({'files': files})
     except Exception as e:
@@ -180,7 +179,9 @@ def user_upload_file():
             
         user_id = request.user['user_id']
         user_department = request.user.get('department')
-        result = file_manager.add_file(file, user_id, user_department)
+        department = request.form.get('department', user_department)  # Lấy từ form hoặc từ user
+        print(f"[DEBUG] Department khi user upload file: {department}")
+        result = file_manager.add_file(file, user_id, department)
         
         if result['success']:
             return jsonify(result), 201
@@ -307,7 +308,7 @@ def get_user_files_enhanced():
     try:
         user_id = request.user['user_id']
         files = file_manager.get_files_by_user(user_id)
-        
+
         # Thêm thông tin phân loại cho từng file
         enhanced_files = []
         for file_info in files:
@@ -368,7 +369,11 @@ def download_file(file_id):
         if not file_path or not os.path.exists(file_path):
             return jsonify({'error': 'File không tồn tại trên server'}), 404
             
-        return send_file(file_path, as_attachment=True)
+        return send_file(
+            file_path, 
+            as_attachment=True,
+            download_name=file_info['original_name']
+        )
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -626,6 +631,11 @@ def admin_upload_file():
         type: string
         required: false
         description: JSON string chứa danh sách user_id được phép truy cập
+      - name: department
+        in: formData
+        type: string
+        required: false
+        description: Department của file
     responses:
       201:
         description: Upload file thành công
@@ -653,11 +663,15 @@ def admin_upload_file():
         except json.JSONDecodeError:
             allowed_users = []
         
-        # Upload file với thông tin phân quyền
+        # Lấy thông tin department
+        department = request.form.get('department', None)
+        print(f"[DEBUG] Department khi upload file: {department}")
+        # Upload file với thông tin phân quyền và department
         result = file_manager.add_file_with_permissions(
             file=file,
             uploaded_by=request.user['user_id'],
-            allowed_users=allowed_users
+            allowed_users=allowed_users,
+            department=department
         )
         
         if result['success']:
@@ -745,6 +759,8 @@ def user_upload_files_batch():
             return jsonify({'error': 'Không có files được chọn'}), 400
             
         user_id = request.user['user_id']
+        user_department = request.user.get('department')
+        department = request.form.get('department', user_department)  # Lấy từ form hoặc từ user
         successful_files = []
         failed_files = []
         
@@ -753,7 +769,7 @@ def user_upload_files_batch():
                 continue
                 
             try:
-                result = file_manager.add_file(file, user_id)
+                result = file_manager.add_file(file, user_id, department)
                 if result['success']:
                     successful_files.append(result['file'])
                 else:
@@ -809,6 +825,11 @@ def admin_upload_files_batch():
         type: string
         required: false
         description: JSON string chứa danh sách user_id được phép truy cập
+      - name: department
+        in: formData
+        type: string
+        required: false
+        description: Department của files
     responses:
       201:
         description: Upload files thành công
@@ -836,6 +857,9 @@ def admin_upload_files_batch():
         except json.JSONDecodeError:
             allowed_users = []
         
+        # Lấy thông tin department
+        department = request.form.get('department', None)
+        
         successful_files = []
         failed_files = []
         
@@ -844,11 +868,12 @@ def admin_upload_files_batch():
                 continue
                 
             try:
-                # Upload file với thông tin phân quyền
+                # Upload file với thông tin phân quyền và department
                 result = file_manager.add_file_with_permissions(
                     file=file,
                     uploaded_by=request.user['user_id'],
-                    allowed_users=allowed_users
+                    allowed_users=allowed_users,
+                    department=department
                 )
                 
                 if result['success']:

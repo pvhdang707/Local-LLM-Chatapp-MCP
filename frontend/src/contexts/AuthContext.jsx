@@ -6,6 +6,7 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userDepartment, setUserDepartment] = useState(null); // Thêm department state
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,6 +20,7 @@ export const AuthProvider = ({ children }) => {
           if (currentUser) {
             setUser(currentUser);
             setIsAdmin(currentUser.isAdmin);
+            setUserDepartment(currentUser.department); // Thêm department
           } else {
             // Nếu không có trong localStorage, lấy từ API
             const profileData = await getProfile();
@@ -26,16 +28,19 @@ export const AuthProvider = ({ children }) => {
               id: profileData.id,
               username: profileData.username,
               role: profileData.role,
+              department: profileData.department, // Thêm department
               isAdmin: profileData.role === 'admin'
             };
             setUser(userData);
             setIsAdmin(userData.isAdmin);
+            setUserDepartment(userData.department); // Thêm department
           }
         } else {
           // Token không hợp lệ, xóa thông tin cũ
           logoutApi();
           setUser(null);
           setIsAdmin(false);
+          setUserDepartment(null); // Thêm reset department
         }
       } catch (error) {
         console.error('Error checking authentication:', error);
@@ -43,6 +48,7 @@ export const AuthProvider = ({ children }) => {
         logoutApi();
         setUser(null);
         setIsAdmin(false);
+        setUserDepartment(null); // Thêm reset department
       } finally {
         setLoading(false);
       }
@@ -61,10 +67,12 @@ export const AuthProvider = ({ children }) => {
           id: result.user.id,
           username: result.user.username,
           role: result.user.role,
+          department: result.user.department, // Thêm department
           isAdmin: result.user.role === 'admin'
         };
         setUser(userData);
         setIsAdmin(userData.isAdmin);
+        setUserDepartment(userData.department); // Thêm department
         return { success: true };
       } else {
         return { success: false, error: result.message };
@@ -79,12 +87,14 @@ export const AuthProvider = ({ children }) => {
     logoutApi();
     setUser(null);
     setIsAdmin(false);
+    setUserDepartment(null); // Thêm reset department
   };
 
   // Hàm cập nhật thông tin user
   const updateUser = (userData) => {
     setUser(userData);
     setIsAdmin(userData.role === 'admin');
+    setUserDepartment(userData.department); // Thêm department
   };
 
   if (loading) {
@@ -102,6 +112,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{ 
       user, 
       isAdmin, 
+      userDepartment, // Thêm department
       login, 
       logout, 
       loading,

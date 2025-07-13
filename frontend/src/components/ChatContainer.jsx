@@ -333,7 +333,7 @@ const ChatContainer = () => {
         </div>
 
         {/* Chat Input - Bottom */}
-        {activeTab === 'chat' && sessions.length > 0 && (
+        {activeTab === 'chat' && sessions.length >= 0 && (
           <div className="border-t border-gray-200 bg-gray-50 p-6 w-full flex justify-center">
             <div className="w-full max-w-3xl">
               <ChatInput 
