@@ -24,11 +24,34 @@ const FeedbackModal = ({
     
     setIsSubmitting(true);
     try {
-      await onSubmit({
+      // Xử lý original_group từ classification
+      let originalGroup = 'F'; // Default
+      if (originalClassification) {
+        // Kiểm tra các trường có thể có
+        if (originalClassification.group_id) {
+          originalGroup = originalClassification.group_id;
+        } else if (originalClassification.group_name) {
+          // Map group_name sang group_id
+          const groupNameToId = {
+            'Tài liệu quan trọng': 'A',
+            'Tài liệu marketing': 'B', 
+            'Tài liệu kỹ thuật': 'C',
+            'Tài liệu tài chính': 'D',
+            'Tài liệu nhân sự': 'E',
+            'Tài liệu khác': 'F'
+          };
+          originalGroup = groupNameToId[originalClassification.group_name] || 'F';
+        }
+      }
+
+      const feedbackData = {
         file_name: fileName,
-        original_group: originalClassification?.group_id || 'F',
+        original_group: originalGroup,
         corrected_group: selectedGroup
-      });
+      };
+      
+      console.log('Sending feedback data:', feedbackData);
+      await onSubmit(feedbackData);
       onClose();
     } catch (error) {
       console.error('Error submitting feedback:', error);

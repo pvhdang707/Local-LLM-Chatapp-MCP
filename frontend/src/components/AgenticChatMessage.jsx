@@ -60,6 +60,8 @@ const AgenticChatMessage = ({ message, agentic, onDownload }) => {
   const activeFile = files.find(f => f.id === activeTab) || files[0];
 
   const handleFeedbackClick = (file) => {
+    console.log('File for feedback:', file);
+    console.log('File classification:', file.classification);
     setSelectedFileForFeedback(file);
     setShowFeedbackModal(true);
   };
@@ -293,7 +295,8 @@ const AgenticChatMessage = ({ message, agentic, onDownload }) => {
           isOpen={showFeedbackModal}
           onClose={() => setShowFeedbackModal(false)}
           onSubmit={handleFeedbackSubmit}
-          file={selectedFileForFeedback}
+          fileName={selectedFileForFeedback.name}
+          originalClassification={selectedFileForFeedback.classification}
         />
       )}
     </div>
