@@ -99,6 +99,10 @@ swagger_template = {
             "description": "Agentic AI features"
         },
         {
+            "name": "Agentic AI Sessions",
+            "description": "Agentic AI session management"
+        },
+        {
             "name": "Feedback",
             "description": "Feedback system for file classification"
         }

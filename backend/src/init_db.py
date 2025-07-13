@@ -13,7 +13,7 @@ load_dotenv()
 # Add current directory to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from src.database import create_tables, engine, SessionLocal
+from src.database import create_tables, engine, SessionLocal, User
 from src.auth import AuthManager
 import uuid
 from datetime import datetime
@@ -26,6 +26,9 @@ def init_database():
         create_tables()
         print("✅ Các bảng đã được tạo thành công!")
         
+        # Tạo admin user mặc định
+        create_default_admin()
+        
         print("\n🎉 Database đã được khởi tạo thành công!")
         print("Thông tin đăng nhập mặc định:")
         print("Username: admin")
@@ -36,6 +39,43 @@ def init_database():
         return False
     
     return True
+
+def create_default_admin():
+    """Tạo admin user mặc định"""
+    try:
+        db = SessionLocal()
+        
+        # Kiểm tra xem admin đã tồn tại chưa
+        existing_admin = db.query(User).filter(User.username == "admin").first()
+        
+        if not existing_admin:
+            print("Đang tạo admin user mặc định...")
+            
+            # Hash password
+            auth_manager = AuthManager()
+            hashed_password = auth_manager.hash_password("admin123")
+            
+            # Tạo admin user
+            admin_user = User(
+                id=str(uuid.uuid4()),
+                username="admin",
+                password=hashed_password,
+                role="admin",
+                department="System",
+                created_at=datetime.utcnow(),
+                is_active=True
+            )
+            
+            db.add(admin_user)
+            db.commit()
+            print("✅ Admin user đã được tạo thành công!")
+        else:
+            print("ℹ️ Admin user đã tồn tại, bỏ qua.")
+            
+    except Exception as e:
+        print(f"❌ Lỗi khi tạo admin user: {e}")
+    finally:
+        db.close()
 
 def test_connection():
     """Test kết nối database"""

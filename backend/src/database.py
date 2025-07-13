@@ -115,6 +115,39 @@ class ChatHistory(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     file_id = Column(String(36), nullable=True)  # Reference to file if used in chat
 
+# Agentic AI Session model
+class AgenticSession(Base):
+    __tablename__ = "agentic_sessions"
+    
+    id = Column(String(36), primary_key=True, index=True)
+    user_id = Column(String(36), nullable=False, index=True)
+    username = Column(String(50), nullable=False)
+    title = Column(String(255), nullable=False, default="Agentic AI Session")
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    total_messages = Column(Integer, default=0, nullable=False)
+    last_activity = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+# Agentic AI Message model
+class AgenticMessage(Base):
+    __tablename__ = "agentic_messages"
+    
+    id = Column(String(36), primary_key=True, index=True)
+    session_id = Column(String(36), nullable=False, index=True)
+    user_id = Column(String(36), nullable=False, index=True)
+    username = Column(String(50), nullable=False)
+    user_request = Column(Text, nullable=False)
+    plan = Column(Text, nullable=True)  # JSON string của plan
+    execution_results = Column(Text, nullable=True)  # JSON string của execution results
+    summary = Column(Text, nullable=True)  # JSON string của summary
+    message_type = Column(String(20), default="user", nullable=False)  # user, assistant, system
+    status = Column(String(20), default="completed", nullable=False)  # completed, failed, in_progress
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    completed_at = Column(DateTime, nullable=True)
+    error_message = Column(Text, nullable=True)
+
 # Create all tables
 def create_tables():
     Base.metadata.create_all(bind=engine)
