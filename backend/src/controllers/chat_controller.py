@@ -552,6 +552,8 @@ def delete_chat_session(session_id):
         
         if result['success']:
             return jsonify(result)
+        elif result.get('message') == 'Chat session không tồn tại':
+            return jsonify(result), 404
         else:
             return jsonify(result), 400
             

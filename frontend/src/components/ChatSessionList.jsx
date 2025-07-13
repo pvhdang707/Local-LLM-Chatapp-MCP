@@ -18,7 +18,8 @@ const ChatSessionList = ({
   const [loading, setLoading] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
 
-  const handleDeleteSession = async (sessionId, e) => {
+  // Sửa lại: chỉ mở dialog xác nhận, không gọi API xóa ở đây
+  const handleDeleteSession = (sessionId, e) => {
     e.stopPropagation();
     const session = sessions.find(s => s.id === sessionId);
     setSessionToDelete(session);
@@ -26,13 +27,11 @@ const ChatSessionList = ({
   };
 
   const confirmDeleteSession = async () => {
-    if (!sessionToDelete) return;
-    
+    if (!sessionToDelete || loading) return;
     try {
       setLoading(true);
-      await deleteChatSession(sessionToDelete.id);
       if (onDeleteChat) {
-        onDeleteChat(sessionToDelete.id);
+        onDeleteChat(sessionToDelete.id); // Chỉ callback để cha reload lại danh sách, KHÔNG gọi API xóa ở cha nữa
       }
     } catch (error) {
       console.error('Lỗi xóa session:', error);

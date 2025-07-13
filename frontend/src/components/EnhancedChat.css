@@ -38,42 +38,7 @@
   }
 }
 
-/* Enhanced Processing Modal */
-.enhanced-processing-modal {
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-}
 
-.enhanced-processing-modal .modal-content {
-  animation: modalSlideIn 0.3s ease-out;
-}
-
-@keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9) translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-/* Progress Bar Animation */
-.progress-bar {
-  background: linear-gradient(90deg, #4f46e5, #7c3aed, #ec4899);
-  background-size: 200% 100%;
-  animation: progressShimmer 2s ease-in-out infinite;
-}
-
-@keyframes progressShimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
-}
 
 /* Enhanced Message Styles */
 .enhanced-chat-message {
@@ -252,7 +217,6 @@
 /* Print Styles */
 @media print {
   .enhanced-chat-toggle,
-  .enhanced-processing-modal,
   .file-detail-modal {
     display: none !important;
   }

@@ -107,19 +107,7 @@ const Login = () => {
           </button>
         </form>
         
-        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">Tài khoản mặc định:</h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Admin:</span>
-              <span className="font-mono text-gray-800">admin / admin123</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">User:</span>
-              <span className="font-mono text-gray-800">user / user123</span>
-            </div>
-          </div>
-        </div>
+        
       </div>
     </div>
   );
