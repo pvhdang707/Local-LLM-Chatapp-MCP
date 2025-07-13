@@ -8,7 +8,7 @@ import Welcome from './Welcome';
 import Loading from './Loading';
 import ChatStatus from './ChatStatus';
 import ChatInput from './ChatInput';
-import EnhancedChatToggle from './EnhancedChatToggle';
+
 import DebugPanel from './DebugPanel';
 import ChatAreaLoading from './ChatAreaLoading';
 import SessionLoading from './SessionLoading';
@@ -97,8 +97,14 @@ const ChatContainer = () => {
   }, [activeTab, selectedSessionId, sessions.length, isComposingNew]);
 
   // Khi user bấm "Cuộc trò chuyện mới"
-  const handleNewChat = () => {
-    startNewSession();
+  const handleNewChat = (sessionType = 'normal') => {
+    if (sessionType === 'agentic' || sessionType === 'enhanced') {
+      // Tạo session với type cụ thể
+      createSession(sessionType);
+    } else {
+      // Tạo chat session thường
+      startNewSession();
+    }
   };
 
   // Khi user chọn session cũ

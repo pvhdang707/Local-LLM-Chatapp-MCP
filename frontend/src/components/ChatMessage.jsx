@@ -1,7 +1,26 @@
 import React from 'react';
 import EnhancedChatMessage from './EnhancedChatMessage';
 
-const ChatMessage = ({ isUser, message, enhanced = null, onDownload }) => {
+const ChatMessage = ({ isUser, message, enhanced = null, agentic = null, onDownload }) => {
+  // Ưu tiên agentic nếu có
+  const enhancedData = agentic || enhanced;
+
+  // Xử lý nội dung tin nhắn
+  let displayMessage = '';
+  if (isUser) {
+    displayMessage = message.user_request || message.text || '';
+  } else {
+    if (message.response) {
+      displayMessage = message.response;
+    } else if (message.execution_results?.chain_of_thought) {
+      displayMessage = message.execution_results.chain_of_thought;
+    } else if (message.summary) {
+      displayMessage = message.summary;
+    } else {
+      displayMessage = 'Hệ thống đã xử lý yêu cầu của bạn.';
+    }
+  }
+
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
@@ -13,14 +32,13 @@ const ChatMessage = ({ isUser, message, enhanced = null, onDownload }) => {
         style={{ minWidth: 60 }}
       >
         <div className="message-content whitespace-pre-line">
-          {message}
+          {displayMessage}
         </div>
-        
-        {/* Enhanced Chat Results */}
-        {!isUser && enhanced && (
+        {/* Enhanced/Agentic Chat Results */}
+        {!isUser && enhancedData && (
           <EnhancedChatMessage 
-            message={message} 
-            enhanced={enhanced} 
+            message={displayMessage} 
+            enhanced={enhancedData} 
             onDownload={onDownload}
           />
         )}

@@ -5,7 +5,7 @@ import logo_user from '../assets/user.png';
 
 const Message = ({ message, onDownload }) => {
   if (!message) return null;
-  const { sender, text, timestamp, enhanced, mode, isLoading } = message;
+  const { sender, text, timestamp, enhanced, mode, isLoading, isFailed, isCompleted, error_message } = message;
   const isUser = sender === 'user';
   
   // Avatar: chữ cái đầu hoặc icon
@@ -36,6 +36,37 @@ const Message = ({ message, onDownload }) => {
     );
   }
 
+  // Xử lý tin nhắn thất bại
+  if (isFailed) {
+    return (
+      <div className={`flex w-full mb-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
+        {/* Avatar */}
+        {!isUser && <div className="mr-2 flex-shrink-0 flex items-end">{avatar}</div>}
+        <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[75%]`}>
+          <div className={`max-w-full px-5 py-3 rounded-2xl shadow-md text-base leading-relaxed break-words
+            ${isUser
+              ? 'bg-red-500 text-white rounded-br-md rounded-tr-2xl rounded-tl-2xl'
+              : 'bg-red-50 text-red-900 border border-red-200 rounded-bl-md rounded-tl-2xl rounded-tr-2xl'}
+          `}>
+            <div className="message-content whitespace-pre-line">
+              {isUser ? text : `❌ Yêu cầu thất bại: ${error_message || 'Không thể xử lý yêu cầu'}`}
+            </div>
+          </div>
+          <div className={`text-[11px] text-gray-400 select-none pt-1 ${isUser ? 'text-right pr-2' : 'text-left pl-2'}`}>
+            <div className="flex items-center space-x-2">
+              <span>{timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+              <span className="inline-flex items-center px-1 py-0.5 rounded text-xs bg-red-100 text-red-800">
+                ❌ Thất bại
+              </span>
+            </div>
+          </div>
+        </div>
+        {/* Avatar user */}
+        {isUser && <div className="ml-2 flex-shrink-0 flex items-end">{avatar}</div>}
+      </div>
+    );
+  }
+
   return (
     <div className={`flex w-full mb-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
       {/* Avatar */}
@@ -53,6 +84,11 @@ const Message = ({ message, onDownload }) => {
             {mode === 'enhanced' && !isUser && (
               <span className="inline-flex items-center px-1 py-0.5 rounded text-xs bg-green-100 text-green-800">
                 🔍 Enhanced
+              </span>
+            )}
+            {isCompleted && !isUser && (
+              <span className="inline-flex items-center px-1 py-0.5 rounded text-xs bg-green-100 text-green-800">
+                ✅ Hoàn thành
               </span>
             )}
           </div>

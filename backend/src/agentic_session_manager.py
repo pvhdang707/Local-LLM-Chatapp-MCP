@@ -107,6 +107,7 @@ class AgenticSessionManager:
                 message_data = {
                     'id': msg.id,
                     'user_request': msg.user_request,
+                    'response': msg.response,
                     'message_type': msg.message_type,
                     'status': msg.status,
                     'created_at': msg.created_at.isoformat(),
@@ -152,7 +153,7 @@ class AgenticSessionManager:
             db.close()
     
     def add_message_to_session(self, session_id: str, user_id: str, username: str, 
-                              user_request: str, plan: Dict = None, 
+                              user_request: str, response: str = None, plan: Dict = None, 
                               execution_results: Dict = None, summary: Dict = None,
                               message_type: str = "user", status: str = "completed") -> Dict:
         """Thêm tin nhắn vào session"""
@@ -177,6 +178,7 @@ class AgenticSessionManager:
                 user_id=user_id,
                 username=username,
                 user_request=user_request,
+                response=response,
                 plan=json.dumps(plan) if plan else None,
                 execution_results=json.dumps(execution_results) if execution_results else None,
                 summary=json.dumps(summary) if summary else None,
@@ -270,13 +272,23 @@ class AgenticSessionManager:
             plan_result = self.agentic_ai.plan_actions(user_request)
             
             if not plan_result['success']:
-                # Lưu message với lỗi
+                # Lưu message với lỗi (user gửi)
                 self.add_message_to_session(
                     session_id=session_id,
                     user_id=user_id,
                     username=username,
                     user_request=user_request,
                     message_type="user",
+                    status="failed"
+                )
+                # Lưu message lỗi cho assistant
+                self.add_message_to_session(
+                    session_id=session_id,
+                    user_id=user_id,
+                    username=username,
+                    user_request=None,
+                    response=plan_result.get('error', 'Lỗi không xác định'),
+                    message_type="assistant",
                     status="failed"
                 )
                 return plan_result
@@ -288,32 +300,116 @@ class AgenticSessionManager:
                 user_role
             )
             
-            # Bước 3: Lưu message vào session
-            message_result = self.add_message_to_session(
+            # Bước 3: Tạo response text từ kết quả
+            response_text = self._create_response_text(execution_result, plan_result['plan'])
+            
+            # Bước 4: Lưu message của user
+            self.add_message_to_session(
                 session_id=session_id,
                 user_id=user_id,
                 username=username,
                 user_request=user_request,
+                message_type="user",
+                status="completed"
+            )
+            # Bước 5: Lưu message của assistant (bot)
+            message_result = self.add_message_to_session(
+                session_id=session_id,
+                user_id=user_id,
+                username=username,
+                user_request=None,
+                response=response_text,
                 plan=plan_result['plan'],
                 execution_results=execution_result,
                 summary=execution_result.get('summary'),
-                message_type="user",
+                message_type="assistant",
                 status="completed" if execution_result['success'] else "failed"
             )
             
             if not message_result['success']:
                 return message_result
             
-            # Bước 4: Trả về kết quả
+            # Bước 6: Trả về kết quả
             return {
                 'success': True,
                 'session_id': session_id,
                 'message_id': message_result['message_id'],
                 'user_request': user_request,
+                'response': response_text,
                 'plan': plan_result['plan'],
                 'execution_results': execution_result,
                 'summary': execution_result.get('summary')
             }
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def _create_response_text(self, execution_result: Dict, plan: Dict) -> str:
+        """Tạo response text từ kết quả execution"""
+        try:
+            if not execution_result.get('success'):
+                return f"❌ Không thể thực hiện yêu cầu: {execution_result.get('error', 'Lỗi không xác định')}"
+            
+            # Lấy thông tin từ execution
+            summary = execution_result.get('summary', {})
+            chain_of_thought = execution_result.get('chain_of_thought', '')
+            execution_results = execution_result.get('execution_results', [])
+            
+            # Tạo response text
+            response_parts = []
+            
+            # Thêm tóm tắt kết quả
+            if summary:
+                total_steps = summary.get('total_steps_completed', 0)
+                files_processed = summary.get('files_processed', 0)
+                actions_performed = summary.get('actions_performed', [])
+                
+                response_parts.append(f"✅ **Hoàn thành {total_steps} bước xử lý**")
+                
+                if files_processed > 0:
+                    response_parts.append(f"📁 **Đã xử lý {files_processed} file**")
+                
+                if actions_performed:
+                    response_parts.append("🔧 **Các hành động đã thực hiện:**")
+                    for action in actions_performed:
+                        response_parts.append(f"  • {action}")
+            
+            # Thêm chain of thought nếu có
+            if chain_of_thought:
+                response_parts.append("\n🧠 **Quá trình suy nghĩ:**")
+                response_parts.append(chain_of_thought)
+            
+            # Thêm chi tiết từng bước
+            if execution_results:
+                response_parts.append("\n📋 **Chi tiết từng bước:**")
+                for i, step_result in enumerate(execution_results, 1):
+                    step = step_result.get('step', {})
+                    result = step_result.get('result', {})
+                    status = step_result.get('status', 'unknown')
+                    
+                    step_desc = step.get('description', f'Bước {i}')
+                    response_parts.append(f"\n**{i}. {step_desc}**")
+                    
+                    if status == 'success':
+                        response_parts.append("✅ Thành công")
+                        
+                        # Thêm thông tin file nếu có
+                        if 'files' in result:
+                            files = result['files']
+                            if files:
+                                response_parts.append(f"📄 Tìm thấy {len(files)} file:")
+                                for file in files[:5]:  # Chỉ hiển thị 5 file đầu
+                                    name = file.get('name') or file.get('original_name', 'Unknown')
+                                    response_parts.append(f"  • {name}")
+                                if len(files) > 5:
+                                    response_parts.append(f"  ... và {len(files) - 5} file khác")
+                    else:
+                        response_parts.append(f"❌ Thất bại: {result.get('error', 'Lỗi không xác định')}")
+            
+            return "\n".join(response_parts)
+            
+        except Exception as e:
+            return f"✅ Đã hoàn thành xử lý yêu cầu của bạn.\n\nLưu ý: Có lỗi khi tạo response chi tiết: {str(e)}"
             
         except Exception as e:
             return {'success': False, 'error': str(e)}

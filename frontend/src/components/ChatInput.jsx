@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useEnhancedChat } from '../contexts/EnhancedChatContext';
-import EnhancedChatToggle from './EnhancedChatToggle';
+
 
 const ChatInput = ({ 
   placeholder = "Nhập tin nhắn của bạn...",
@@ -60,11 +60,7 @@ const ChatInput = ({
       <form onSubmit={handleSubmit} className="relative max-w-4xl mx-auto">
         <div className="flex  gap-3">
           {/* Toggle bên trái */}
-          {showToggle && (
-            <div className="flex-shrink-0 items-center justify-center">
-              <EnhancedChatToggle />
-            </div>
-          )}
+          
           <div className="relative flex-1 bg-white rounded-2xl shadow-lg border border-gray-200 hover:border-gray-300 transition-all duration-200">
             <textarea
               ref={inputRef}

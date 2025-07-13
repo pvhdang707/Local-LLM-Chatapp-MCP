@@ -13,8 +13,8 @@ load_dotenv()
 # Add current directory to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from src.database import create_tables, engine, SessionLocal, User
-from src.auth import AuthManager
+from database import create_tables, engine, SessionLocal, User
+from auth import AuthManager
 import uuid
 from datetime import datetime
 from sqlalchemy import text

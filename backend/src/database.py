@@ -139,6 +139,7 @@ class AgenticMessage(Base):
     user_id = Column(String(36), nullable=False, index=True)
     username = Column(String(50), nullable=False)
     user_request = Column(Text, nullable=False)
+    response = Column(Text, nullable=True)  # Phản hồi từ hệ thống
     plan = Column(Text, nullable=True)  # JSON string của plan
     execution_results = Column(Text, nullable=True)  # JSON string của execution results
     summary = Column(Text, nullable=True)  # JSON string của summary

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { deleteChatSession, updateSessionTitle } from '../services/api';
 import ConfirmModal from './ConfirmModal';
+import SessionTypeModal from './SessionTypeModal';
 
 const ChatSessionList = ({
   sessions = [],
@@ -17,6 +18,7 @@ const ChatSessionList = ({
   const [sessionToDelete, setSessionToDelete] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
+  const [showSessionTypeModal, setShowSessionTypeModal] = useState(false);
 
   // Sửa lại: chỉ mở dialog xác nhận, không gọi API xóa ở đây
   const handleDeleteSession = (sessionId, e) => {
@@ -94,12 +96,21 @@ const ChatSessionList = ({
   };
 
   const handleCreateSession = async () => {
+    setShowSessionTypeModal(true);
+  };
+
+  const handleSelectSessionType = async (sessionType) => {
     setIsCreatingSession(true);
+    setShowSessionTypeModal(false);
     try {
-      await onCreateSession();
+      await onCreateSession(sessionType);
     } finally {
       setIsCreatingSession(false);
     }
+  };
+
+  const handleCloseSessionTypeModal = () => {
+    setShowSessionTypeModal(false);
   };
 
   return (
@@ -142,17 +153,37 @@ const ChatSessionList = ({
                     <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
                       selectedSessionId === session.id 
                         ? 'bg-blue-500 text-white' 
+                        : session.type === 'agentic'
+                        ? 'bg-purple-600 text-white'
+                        : session.type === 'enhanced'
+                        ? 'bg-green-600 text-white'
                         : 'bg-gray-700 text-gray-400'
                     }`}>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                      </svg>
+                      {session.type === 'agentic' ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                      ) : session.type === 'enhanced' ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                      )}
                     </div>
                     
                     {/* Tiêu đề session */}
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium leading-tight truncate">
+                      <div className="text-sm font-medium leading-tight truncate flex items-center gap-2">
                         {session.title || 'Cuộc trò chuyện mới'}
+                        {session.type === 'agentic' && (
+                          <span className="text-xs bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded-full">Agentic</span>
+                        )}
+                        {session.type === 'enhanced' && (
+                          <span className="text-xs bg-green-100 text-green-800 px-1.5 py-0.5 rounded-full">Nâng cao</span>
+                        )}
                       </div>
                       {session.created_at && (
                         <div className={`text-xs mt-1 ${
@@ -285,6 +316,13 @@ const ChatSessionList = ({
         cancelText="Hủy"
         loading={loading}
         confirmButtonClass="bg-red-600 hover:bg-red-700"
+      />
+
+      {/* Modal chọn loại session */}
+      <SessionTypeModal
+        isOpen={showSessionTypeModal}
+        onClose={handleCloseSessionTypeModal}
+        onSelectType={handleSelectSessionType}
       />
     </div>
   );

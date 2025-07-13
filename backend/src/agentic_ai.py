@@ -284,26 +284,48 @@ class AgenticAI:
     
     def _execute_search_files(self, parameters: Dict, user_id: str, user_role: str) -> Dict:
         """Thực hiện tìm kiếm file"""
-        query = parameters.get('query', '')
-        search_type = parameters.get('search_type', 'both')
-        
-        results = file_search_engine.search_files(
-            query=query,
-            user_id=user_id,
-            user_role=user_role,
-            search_type=search_type,
-            limit=10
-        )
-        # Bổ sung download_url cho từng file
-        for file in results:
-            file['download_url'] = f"/api/user/files/download/{file['id']}"
-        
-        return {
-            'action': 'search_files',
-            'query': query,
-            'files_found': len(results),
-            'files': results
-        }
+        try:
+            query = parameters.get('query', '')
+            search_type = parameters.get('search_type', 'both')
+            
+            print(f"[AGENTIC AI] Executing search_files with query: '{query}', user_id: {user_id}, user_role: {user_role}")
+            
+            # Kiểm tra file_search_engine có được khởi tạo không
+            if not hasattr(file_search_engine, 'index_data'):
+                print("[AGENTIC AI] file_search_engine not initialized, reloading index...")
+                file_search_engine.load_index()
+            
+            results = file_search_engine.search_files(
+                query=query,
+                user_id=user_id,
+                user_role=user_role,
+                search_type=search_type,
+                limit=10
+            )
+            
+            print(f"[AGENTIC AI] Search completed, found {len(results)} files")
+            
+            # Bổ sung download_url cho từng file
+            for file in results:
+                file['download_url'] = f"/api/user/files/download/{file['id']}"
+            
+            return {
+                'action': 'search_files',
+                'query': query,
+                'files_found': len(results),
+                'files': results
+            }
+        except Exception as e:
+            print(f"[AGENTIC AI] Error in _execute_search_files: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return {
+                'action': 'search_files',
+                'query': parameters.get('query', ''),
+                'error': str(e),
+                'files_found': 0,
+                'files': []
+            }
     
     def _execute_classify_files(self, file_ids: List[str]) -> Dict:
         """Thực hiện phân loại file"""

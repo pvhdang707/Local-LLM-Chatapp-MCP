@@ -42,6 +42,17 @@ const EnhancedChatMessage = ({ message, enhanced, onDownload }) => {
     }
   }
 
+  // Lấy danh sách file từ bước search_files (luôn lấy từ execution_results)
+  let previewFiles = [];
+  if (enhanced?.execution_results?.execution_results) {
+    const searchStep = enhanced.execution_results.execution_results.find(
+      step => step.step?.action === 'search_files' && Array.isArray(step.result?.files)
+    );
+    if (searchStep) {
+      previewFiles = searchStep.result.files;
+    }
+  } 
+
   const [activeTab, setActiveTab] = useState(files[0]?.id || null);
   const [showReasoning, setShowReasoning] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -203,6 +214,38 @@ const EnhancedChatMessage = ({ message, enhanced, onDownload }) => {
           </div>
         </div>
       </div>
+
+      {/* Preview nội dung file kết quả (luôn hiển thị nếu có file) */}
+      {files.length > 0 && (
+        <div className="mt-4">
+          <h4 className="text-sm font-semibold text-blue-700 mb-2">📄 Preview nội dung file kết quả:</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {files.map(file => (
+              <div key={file.id} className="border rounded bg-white p-3 shadow-sm">
+                <div className="font-semibold mb-1">{file.name}</div>
+                <div className="text-xs text-gray-500 mb-1">{file.type}</div>
+                <div className="mb-2">
+                  <b className="block text-xs text-gray-500 mb-1">Preview nội dung:</b>
+                  <pre className="bg-gray-50 border rounded p-2 text-xs max-h-48 overflow-auto whitespace-pre-line">
+                    {file.content_preview || 'Không có preview'}
+                  </pre>
+                </div>
+                {file.download_url && (
+                  <a
+                    href={file.download_url}
+                    className="inline-block mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+                    download={file.name}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Tải file
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Feedback Modal */}
       {selectedFileForFeedback && (
