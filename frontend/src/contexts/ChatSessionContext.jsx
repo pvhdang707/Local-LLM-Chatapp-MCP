@@ -238,7 +238,8 @@ export const ChatSessionProvider = ({ children }) => {
     try {
       if (!sessionId && isComposingNew) {
         console.log('[LOG] Chưa có session, tạo session mới trước khi gửi message:', text);
-        createdSession = await createSession();
+        // Tạo session với type phù hợp với mode
+        createdSession = await createSession(mode);
         sessionId = createdSession.id;
         justCreatedSession = true;
         console.log('[LOG] Đã tạo session mới, id:', sessionId);
@@ -272,6 +273,8 @@ export const ChatSessionProvider = ({ children }) => {
       let res;
       const sessionType = currentSession?.type || createdSession?.type || 'normal';
       
+      console.log(`[LOG] Processing message with sessionType: ${sessionType}, mode: ${mode}`);
+      
       if (mode === 'enhanced' || sessionType === 'enhanced') {
         console.log('[LOG] Gửi message enhanced:', text, 'với sessionId:', sessionId);
         const enhancedResult = await processEnhancedChat(text, sessionId);
@@ -288,8 +291,9 @@ export const ChatSessionProvider = ({ children }) => {
           agentic: agenticResult
         };
       } else {
+        // Chat thường - gửi session_type để backend biết không dùng RAG
         console.log('[LOG] Gửi message thường:', text, 'với sessionId:', sessionId);
-        res = await sendChatMessage(sessionId, text);
+        res = await sendChatMessage(sessionId, text, sessionType); // Truyền sessionType
       }
       
       // 4. Khi có kết quả, thay thế message bot tạm thời bằng câu trả lời thật
@@ -300,7 +304,7 @@ export const ChatSessionProvider = ({ children }) => {
           const newMsgs = [...prev];
           newMsgs[idx] = {
             sender: 'bot',
-            text: res.response || res.text,
+            text: res.response || res.text || 'Không có phản hồi',
             timestamp: new Date().toISOString(),
             enhanced: res.enhanced || null,
             agentic: res.agentic || null,
@@ -339,7 +343,7 @@ export const ChatSessionProvider = ({ children }) => {
     } finally {
       setIsLoadingChat(false);
     }
-  }, [selectedSessionId, isComposingNew, createSession, processEnhancedChat]);
+  }, [selectedSessionId, isComposingNew, createSession, processEnhancedChat, sessions]);
 
   // Cập nhật tiêu đề session
   const updateSession = useCallback(async (sessionId, newTitle) => {

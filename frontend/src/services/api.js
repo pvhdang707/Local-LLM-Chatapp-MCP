@@ -143,16 +143,32 @@ export async function createChatSession(title = 'Cuộc trò chuyện mới') {
   }
 }
 
-export async function sendChatMessage(sessionId, message) {
+export const sendChatMessage = async (sessionId, message, sessionType = 'normal') => {
   try {
-    const res = await apiClient.post(`/chat/sessions/${sessionId}/send`, { message });
-    // Đảm bảo trả về object message hoặc response
-    return res.data.message || res.data;
+    const response = await fetch(`${API_BASE}/chat/sessions/${sessionId}/send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ 
+        message,
+        session_type: sessionType  // Thêm session_type vào request
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('[API] sendChatMessage response:', data);
+    return data;
   } catch (error) {
-    console.error('Error sending chat message:', error);
+    console.error('[API] Error in sendChatMessage:', error);
     throw error;
   }
-}
+};
 
 export async function deleteChatSession(sessionId) {
   try {
@@ -183,4 +199,4 @@ export async function submitFeedback(feedbackData) {
     console.error('Error submitting feedback:', error);
     throw error;
   }
-} 
+}

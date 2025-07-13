@@ -244,7 +244,10 @@ const ChatContainer = () => {
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-white text-sm font-medium truncate">{user?.username || 'User'}</div>
-              <div className="text-gray-400 text-xs truncate">{user?.email || user?.role || ''}</div>
+              {/* <div className="text-gray-400 text-xs truncate">{user?.email || user?.role || ''}</div> */}
+              {user?.department && (
+                <div className="text-blue-300 text-xs truncate mt-1">Phòng ban: <span className="font-semibold">{user.department}</span></div>
+              )}
             </div>
             {/* Nút logout */}
             <button
@@ -252,10 +255,10 @@ const ChatContainer = () => {
                 localStorage.removeItem('token');
                 window.location.href = '/login';
               }}
-              className="p-1 text-gray-400 hover:text-red-400 transition-colors duration-200"
+              className="px-4 py-2 text-gray-400 hover:text-red-400 transition-colors duration-200"
               title="Đăng xuất"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
             </button>

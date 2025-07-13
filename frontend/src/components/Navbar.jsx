@@ -21,12 +21,12 @@ const Navbar = () => {
       <div className="  container mx-auto p-4">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <Link to="/chat" className="flex items-center space-x-2">
+            <div  className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">AI</span>
               </div>
               <span className="text-xl font-bold text-gray-800">Local LLM Chat</span>
-            </Link>
+            </div>
             
             
           </div>
@@ -42,7 +42,7 @@ const Navbar = () => {
             
             <button
               onClick={handleLogout}
-              className="text-gray-600 hover:text-gray-800"
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-200 hover:text-red-500 rounded-lg"
             >
               Đăng xuất
             </button>
