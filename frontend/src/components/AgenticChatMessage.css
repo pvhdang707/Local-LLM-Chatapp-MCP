@@ -1,0 +1,304 @@
+.agentic-chat-message {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.agentic-chat-message h4 {
+  color: #1e40af;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.agentic-chat-message .file-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 1rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.agentic-chat-message .file-tab {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem 0.375rem 0 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.15s;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.agentic-chat-message .file-tab.active {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+  border-bottom: 2px solid #3b82f6;
+}
+
+.agentic-chat-message .file-tab:not(.active) {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+.agentic-chat-message .file-tab:not(.active):hover {
+  background-color: #e2e8f0;
+}
+
+.agentic-chat-message .file-content {
+  padding: 1rem;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0 0 0.375rem 0.375rem;
+}
+
+.agentic-chat-message .file-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.agentic-chat-message .file-info span {
+  background-color: #f3f4f6;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+}
+
+.agentic-chat-message .file-info .match-score {
+  background-color: #dcfce7;
+  color: #166534;
+  font-weight: 600;
+}
+
+.agentic-chat-message .file-info .classification {
+  background-color: #dbeafe;
+  color: #1e40af;
+  font-weight: 600;
+}
+
+.agentic-chat-message .file-preview {
+  margin-top: 0.75rem;
+}
+
+.agentic-chat-message .file-preview h5 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.agentic-chat-message .file-preview-content {
+  padding: 0.75rem;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  max-height: 16rem;
+  overflow: auto;
+}
+
+.agentic-chat-message .file-preview-content pre {
+  white-space: pre-wrap;
+  color: #1f2937;
+  margin: 0;
+  font-family: inherit;
+}
+
+.agentic-chat-message .classification-reason {
+  margin-top: 0.75rem;
+}
+
+.agentic-chat-message .classification-reason h5 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.agentic-chat-message .classification-reason-content {
+  padding: 0.5rem;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  color: #1e40af;
+}
+
+.agentic-chat-message .summary-grid {
+  margin-top: 1rem;
+}
+
+.agentic-chat-message .summary-grid h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.agentic-chat-message .summary-grid .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 0.75rem;
+}
+
+.agentic-chat-message .summary-grid .file-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background-color: white;
+  padding: 0.75rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.agentic-chat-message .summary-grid .file-card h5 {
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  color: #1f2937;
+}
+
+.agentic-chat-message .summary-grid .file-card .file-type {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+}
+
+.agentic-chat-message .summary-grid .file-card .file-stats {
+  font-size: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.agentic-chat-message .summary-grid .file-card .file-stats .match-score {
+  color: #059669;
+}
+
+.agentic-chat-message .summary-grid .file-card .file-stats .classification {
+  color: #1d4ed8;
+}
+
+.agentic-chat-message .summary-grid .file-card .file-preview {
+  font-size: 0.75rem;
+  color: #6b7280;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.agentic-chat-message .download-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  background-color: #3b82f6;
+  color: white;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: background-color 0.15s;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+}
+
+.agentic-chat-message .download-button:hover {
+  background-color: #2563eb;
+}
+
+.agentic-chat-message .feedback-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  background-color: #f59e0b;
+  color: white;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: background-color 0.15s;
+  cursor: pointer;
+  border: none;
+}
+
+.agentic-chat-message .feedback-button:hover {
+  background-color: #d97706;
+}
+
+.agentic-chat-message .chain-of-thought {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.5rem;
+}
+
+.agentic-chat-message .chain-of-thought h4 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  color: #1e40af;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.agentic-chat-message .chain-of-thought .toggle-button {
+  font-size: 0.75rem;
+  color: #3b82f6;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: color 0.15s;
+}
+
+.agentic-chat-message .chain-of-thought .toggle-button:hover {
+  color: #1e40af;
+}
+
+.agentic-chat-message .chain-of-thought .toggle-button svg {
+  transition: transform 0.15s;
+}
+
+.agentic-chat-message .chain-of-thought .toggle-button.expanded svg {
+  transform: rotate(180deg);
+}
+
+.agentic-chat-message .chain-of-thought .content {
+  font-size: 0.875rem;
+  color: #1e40af;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .agentic-chat-message .file-tabs {
+    gap: 0.25rem;
+  }
+  
+  .agentic-chat-message .file-tab {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+  }
+  
+  .agentic-chat-message .file-info {
+    gap: 0.5rem;
+    font-size: 0.6875rem;
+  }
+  
+  .agentic-chat-message .summary-grid .grid {
+    grid-template-columns: 1fr;
+  }
+} 

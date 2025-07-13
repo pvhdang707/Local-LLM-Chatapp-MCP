@@ -286,7 +286,7 @@ class AgenticSessionManager:
                     session_id=session_id,
                     user_id=user_id,
                     username=username,
-                    user_request=None,
+                    user_request="",  # Để trống thay vì None
                     response=plan_result.get('error', 'Lỗi không xác định'),
                     message_type="assistant",
                     status="failed"
@@ -317,7 +317,7 @@ class AgenticSessionManager:
                 session_id=session_id,
                 user_id=user_id,
                 username=username,
-                user_request=None,
+                user_request="",  # Để trống thay vì None
                 response=response_text,
                 plan=plan_result['plan'],
                 execution_results=execution_result,
@@ -410,9 +410,6 @@ class AgenticSessionManager:
             
         except Exception as e:
             return f"✅ Đã hoàn thành xử lý yêu cầu của bạn.\n\nLưu ý: Có lỗi khi tạo response chi tiết: {str(e)}"
-            
-        except Exception as e:
-            return {'success': False, 'error': str(e)}
 
 # Tạo instance global
 agentic_session_manager = AgenticSessionManager() 

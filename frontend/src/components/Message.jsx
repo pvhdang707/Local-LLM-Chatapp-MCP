@@ -5,7 +5,7 @@ import logo_user from '../assets/user.png';
 
 const Message = ({ message, onDownload }) => {
   if (!message) return null;
-  const { sender, text, timestamp, enhanced, mode, isLoading, isFailed, isCompleted, error_message } = message;
+  const { sender, text, timestamp, enhanced, agentic, mode, isLoading, isFailed, isCompleted, error_message } = message;
   const isUser = sender === 'user';
   
   // Avatar: chữ cái đầu hoặc icon
@@ -76,6 +76,7 @@ const Message = ({ message, onDownload }) => {
           isUser={isUser}
           message={message}
           enhanced={enhanced}
+          agentic={agentic}
           onDownload={onDownload}
         />
         <div className={`text-[11px] text-gray-400 select-none pt-1 ${isUser ? 'text-right pr-2' : 'text-left pl-2'}`}>

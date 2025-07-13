@@ -58,105 +58,181 @@ const ChatHistory = ({ messages, isLoading, onDownload, loadingSessionId, select
 
   // Kiểm tra nếu messages đã được xử lý từ ChatSessionContext
   const isProcessedMessages = messages.length > 0 && messages[0].sender !== undefined;
+  console.log('Is processed messages:', isProcessedMessages);
 
   let processedMessages;
   
   if (isProcessedMessages) {
-    // Messages đã được xử lý trong ChatSessionContext, chỉ cần format lại
-    processedMessages = messages.map((msg, idx) => ({
-      id: msg.id || idx,
-      sender: msg.sender,
-      text: msg.text,
-      timestamp: msg.timestamp,
-      agentic: msg.agentic,
-      isFailed: msg.sender === 'bot' && (msg.text.includes('❌') || msg.text.includes('Xử lý thất bại')),
-      isCompleted: msg.sender === 'bot' && (msg.text.includes('✅') || msg.text.includes('Đã hoàn thành')),
-      error_message: null
-    }));
-  } 
-  // else {
-  //   // Messages chưa được xử lý, xử lý như logic cũ
-  //   processedMessages = messages.map((msg, idx) => {
-  //     const isUser = msg.message_type === 'user';
+    // Messages đã được xử lý trong ChatSessionContext - GIỮ NGUYÊN NỘI DUNG
+    console.log('Messages already processed by ChatSessionContext, keeping original format');
+    
+    processedMessages = messages.map((msg, idx) => {
+      console.log(`Keeping processed message ${idx}:`, msg);
       
-  //     // Xử lý nội dung tin nhắn
-  //     let messageText = '';
-  //     if (isUser) {
-  //       messageText = msg.user_request || '';
-  //     } else {
-  //       // Tin nhắn từ assistant - ưu tiên theo thứ tự:
-  //       // 1. response (nếu có và không null)
-  //       // 2. execution_results summary hoặc chain_of_thought
-  //       // 3. fallback message
+      return {
+        id: msg.id || idx,
+        sender: msg.sender,
+        text: msg.text, // GIỮ NGUYÊN text gốc, không thay thế
+        timestamp: msg.timestamp,
+        agentic: msg.agentic,
+        enhanced: msg.enhanced,
+        mode: msg.mode,
+        isLoading: msg.isLoading || false,
+        isFailed: msg.sender === 'bot' && (msg.text?.includes('❌') || msg.text?.includes('Xử lý thất bại') || msg.text?.includes('Thất bại')),
+        isCompleted: msg.sender === 'bot' && (msg.text?.includes('✅') || msg.text?.includes('Đã hoàn thành') || msg.text?.includes('Hoàn thành')),
+        error_message: msg.error_message || null
+      };
+    });
+  } else {
+    // Messages thô từ API - cần xử lý
+    console.log('Raw messages from API detected, processing...');
+    
+    // Debug chi tiết từng message
+    messages.forEach((msg, idx) => {
+      console.log(`Raw Message ${idx}:`, {
+        id: msg.id,
+        message_type: msg.message_type,
+        user_request: msg.user_request,
+        text: msg.text,
+        response: msg.response,
+        status: msg.status,
+        hasExecutionResults: !!msg.execution_results,
+        allFields: Object.keys(msg)
+      });
+    });
+    
+    processedMessages = messages.map((msg, idx) => {
+      const isUser = msg.message_type === 'user';
+      
+      console.log(`Processing raw message ${idx}:`, msg);
+      
+      // Xử lý nội dung tin nhắn
+      let messageText = '';
+      if (isUser) {
+        // Tin nhắn từ user - kiểm tra tất cả các field có thể
+        messageText = msg.user_request || 
+                     msg.text || 
+                     msg.content || 
+                     msg.message || 
+                     'Tin nhắn người dùng không có nội dung';
         
-  //       if (msg.response && msg.response.trim() && msg.response !== 'null') {
-  //         messageText = msg.response;
-  //       } else if (msg.execution_results?.summary) {
-  //         // Tạo summary từ execution_results
-  //         const summary = msg.execution_results.summary;
-  //         const steps = summary.total_steps_completed || 0;
-  //         const filesProcessed = summary.files_processed || 0;
+        console.log(`User message text: "${messageText}" from fields:`, {
+          user_request: msg.user_request,
+          text: msg.text,
+          content: msg.content,
+          message: msg.message
+        });
+      } else {
+        // Tin nhắn từ assistant/bot
+        if (msg.response && msg.response.trim() && msg.response !== 'null') {
+          messageText = msg.response;
+        } else if (msg.execution_results) {
+          // Xử lý execution_results
+          const execResults = msg.execution_results;
           
-  //         messageText = msg.text
+          // Bắt đầu với text gốc nếu có
+          messageText = msg.text || '';
           
-  //         // Thêm thông tin chi tiết các action
-  //         if (summary.actions_performed && summary.actions_performed.length > 0) {
-  //           messageText += '\n\n🔧 **Các hành động đã thực hiện:**\n';
-  //           summary.actions_performed.forEach((action, index) => {
-  //             messageText += `  • ${action.description}: ${action.status === 'success' ? '✅ Thành công' : '❌ Thất bại'}\n`;
-  //           });
-  //         }
+          // Thêm chain of thought nếu có
+          if (execResults.chain_of_thought) {
+            messageText += (messageText ? '\n\n' : '') + `🧠 **Quá trình suy nghĩ:**\n${execResults.chain_of_thought}`;
+          }
           
-  //         // Thêm chain of thought nếu có
-  //         if (msg.execution_results.chain_of_thought) {
-  //           messageText += `\n\n🧠 **Quá trình suy nghĩ:**\n${msg.execution_results.chain_of_thought}`;
-  //         }
-  //       } else if (msg.execution_results?.chain_of_thought) {
-  //         messageText = `🧠 **Quá trình xử lý:**\n${msg.execution_results.chain_of_thought}`;
-  //       } else if (msg.summary) {
-  //         messageText = msg.summary;
-  //       } else if (msg.status === 'failed') {
-  //         messageText = msg.text
-  //       } else if (msg.status === 'completed') {
-  //         messageText = msg.text
-  //       } else {
-  //         messageText = msg.text 
-  //       }
-  //     }
+          // Thêm summary nếu có
+          if (execResults.summary) {
+            const summary = execResults.summary;
+            messageText += (messageText ? '\n\n' : '') + `📋 **Tóm tắt:**\n`;
+            
+            if (summary.total_steps_completed) {
+              messageText += `• Số bước hoàn thành: ${summary.total_steps_completed}\n`;
+            }
+            if (summary.files_processed) {
+              messageText += `• Số file đã xử lý: ${summary.files_processed}\n`;
+            }
+            
+            // Thêm thông tin các action đã thực hiện
+            if (summary.actions_performed && summary.actions_performed.length > 0) {
+              messageText += `\n🔧 **Các hành động đã thực hiện:**\n`;
+              summary.actions_performed.forEach((action) => {
+                messageText += `  • ${action.description}: ${action.status === 'success' ? '✅ Thành công' : '❌ Thất bại'}\n`;
+              });
+            }
+          }
+          
+          // Nếu không có nội dung nào, hiển thị trạng thái
+          if (!messageText.trim()) {
+            messageText = msg.status === 'completed' ? '✅ Đã hoàn thành' : 
+                         msg.status === 'failed' ? '❌ Xử lý thất bại' :
+                         'Đang xử lý...';
+          }
+        } else if (msg.summary) {
+          messageText = msg.summary;
+        } else if (msg.text) {
+          messageText = msg.text;
+        } else {
+          // Fallback dựa trên status
+          messageText = msg.status === 'completed' ? '✅ Đã hoàn thành' : 
+                       msg.status === 'failed' ? '❌ Xử lý thất bại' :
+                       'Tin nhắn không có nội dung';
+        }
+        
+        console.log(`Bot message text: "${messageText}"`);
+      }
 
-  //     // Xử lý timestamp - ưu tiên completed_at cho tin nhắn bot
-  //     const timestamp = isUser ? msg.created_at : (msg.completed_at || msg.created_at);
+      // Xử lý timestamp - ưu tiên completed_at cho tin nhắn bot
+      const timestamp = isUser ? msg.created_at : (msg.completed_at || msg.created_at);
 
-  //     // Xử lý trạng thái
-  //     const isFailed = msg.status === 'failed';
-  //     const isCompleted = msg.status === 'completed';
+      // Xử lý trạng thái
+      const isFailed = msg.status === 'failed' || messageText.includes('❌') || messageText.includes('Thất bại');
+      const isCompleted = msg.status === 'completed' || messageText.includes('✅') || messageText.includes('Hoàn thành');
 
-  //     return {
-  //       id: msg.id || idx,
-  //       sender: isUser ? 'user' : 'bot',
-  //       text: messageText,
-  //       timestamp: timestamp,
-  //       status: msg.status,
-  //       isFailed: isFailed,
-  //       isCompleted: isCompleted,
-  //       // Dữ liệu agentic nếu có
-  //       agentic: (msg.execution_results || msg.plan || msg.summary) ? {
-  //         execution_results: msg.execution_results,
-  //         plan: msg.plan,
-  //         summary: msg.summary,
-  //         user_request: msg.user_request,
-  //         response: msg.response
-  //       } : null,
-  //       // Thông tin lỗi nếu có
-  //       error_message: msg.error_message,
-  //       // Thông tin thời gian
-  //       created_at: msg.created_at,
-  //       completed_at: msg.completed_at
-  //     };
-  //   });
-  // }
+      const processed = {
+        id: msg.id || idx,
+        sender: isUser ? 'user' : 'bot',
+        text: messageText,
+        timestamp: timestamp,
+        status: msg.status,
+        isFailed: isFailed,
+        isCompleted: isCompleted,
+        // Dữ liệu agentic nếu có
+        agentic: (msg.execution_results || msg.plan || msg.summary) ? {
+          execution_results: msg.execution_results,
+          plan: msg.plan,
+          summary: msg.summary,
+          user_request: msg.user_request,
+          response: msg.response
+        } : null,
+        // Dữ liệu enhanced nếu có
+        enhanced: msg.enhanced || null,
+        // Thông tin lỗi nếu có
+        error_message: msg.error_message,
+        // Thông tin thời gian
+        created_at: msg.created_at,
+        completed_at: msg.completed_at,
+        // Thông tin gốc để debug
+        original: msg
+      };
+      
+      console.log(`Processed message ${idx}:`, processed);
+      return processed;
+    });
+  }
 
-  console.log('Processed messages:', processedMessages);
+  console.log('Final processed messages:', processedMessages);
+  console.log('Messages analysis:', {
+    totalMessages: messages.length,
+    isProcessedMessages,
+    firstMessage: messages[0],
+    processedCount: processedMessages.length,
+    messageTypes: processedMessages.map(m => ({ 
+      id: m.id, 
+      sender: m.sender,
+      hasText: !!m.text,
+      textLength: m.text?.length || 0,
+      textPreview: m.text?.substring(0, 50) + (m.text?.length > 50 ? '...' : ''),
+      status: m.status
+    }))
+  });
 
   return (
     <div className="relative h-full">
@@ -174,6 +250,7 @@ const ChatHistory = ({ messages, isLoading, onDownload, loadingSessionId, select
               text: msg.text,
               timestamp: msg.timestamp,
               agentic: msg.agentic,
+              enhanced: msg.enhanced,
               isFailed: msg.isFailed,
               isCompleted: msg.isCompleted,
               error_message: msg.error_message

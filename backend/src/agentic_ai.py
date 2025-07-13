@@ -421,7 +421,13 @@ class AgenticAI:
             filepath = os.path.join(exports_dir, filename)
             
             # Xuất Excel
-            df.to_excel(filepath, index=False, engine='openpyxl')
+            try:
+                df.to_excel(filepath, index=False, engine='openpyxl')
+            except ImportError:
+                # Fallback nếu không có openpyxl
+                df.to_csv(filepath.replace('.xlsx', '.csv'), index=False)
+                filename = filename.replace('.xlsx', '.csv')
+                filepath = filepath.replace('.xlsx', '.csv')
             
             return {
                 'action': 'export_metadata',

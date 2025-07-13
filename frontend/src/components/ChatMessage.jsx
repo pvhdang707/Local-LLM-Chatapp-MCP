@@ -1,10 +1,8 @@
 import React from 'react';
 import EnhancedChatMessage from './EnhancedChatMessage';
+import AgenticChatMessage from './AgenticChatMessage';
 
 const ChatMessage = ({ isUser, message, enhanced = null, agentic = null, onDownload }) => {
-  // Ưu tiên agentic nếu có
-  const enhancedData = agentic || enhanced;
-
   // Xử lý nội dung tin nhắn
   let displayMessage = '';
   if (isUser) {
@@ -28,11 +26,19 @@ const ChatMessage = ({ isUser, message, enhanced = null, agentic = null, onDownl
         <div className="message-content whitespace-pre-line">
           {displayMessage}
         </div>
-        {/* Enhanced/Agentic Chat Results */}
-        {!isUser && enhancedData && (
+        {/* Agentic Chat Results - ưu tiên cao nhất */}
+        {!isUser && agentic && (
+          <AgenticChatMessage 
+            message={displayMessage} 
+            agentic={agentic} 
+            onDownload={onDownload}
+          />
+        )}
+        {/* Enhanced Chat Results - chỉ hiển thị khi không có agentic */}
+        {!isUser && enhanced && !agentic && (
           <EnhancedChatMessage 
             message={displayMessage} 
-            enhanced={enhancedData} 
+            enhanced={enhanced} 
             onDownload={onDownload}
           />
         )}
