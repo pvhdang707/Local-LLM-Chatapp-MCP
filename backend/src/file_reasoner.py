@@ -1,6 +1,6 @@
-from langchain.llms import Ollama
+from langchain_ollama import OllamaLLM
 
-llm = Ollama(model="mistral")  # hoặc llama3 nếu bạn setup sẵn
+llm = OllamaLLM(model="mistral")  # hoặc llama3 nếu bạn setup sẵn
 
 def generate_chain_of_thought(files_found: list, original_prompt: str) -> str:
     if not files_found:

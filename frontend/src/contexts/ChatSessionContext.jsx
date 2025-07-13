@@ -87,42 +87,43 @@ export const ChatSessionProvider = ({ children }) => {
         const agenticMsgs = await getAgenticSessionMessages(sessionId);
         console.log('[DEBUG] Raw agentic messages:', agenticMsgs);
         
-        // Xử lý messages từ Agentic API - mỗi message có cả user request và bot response
+        // Luôn thêm user message nếu có user_request hoặc message_type === 'user'
         (agenticMsgs?.messages || []).forEach(msg => {
-          // Thêm user message
-          if (msg.user_request) {
+          console.log('[DEBUG] Processing agentic message:', msg);
+          if (msg.user_request || msg.message_type === 'user') {
+            console.log('[DEBUG] Adding user message:', msg.user_request || msg.text);
             msgs.push({
               sender: 'user',
-              text: msg.user_request,
-              timestamp: msg.created_at || null,
+              text: msg.user_request || msg.text,
+              timestamp: msg.created_at || msg.timestamp || null,
               agentic: null
             });
           }
-          
-          // Thêm bot response - ưu tiên response trước, sau đó execution_results
-          if (msg.status === 'completed') {
+          // Thêm bot response - kiểm tra cả sender field và status-based logic
+          if (msg.sender === 'bot' && msg.text) {
+            console.log('[DEBUG] Adding bot message with text:', msg.text);
+            msgs.push({
+              sender: 'bot',
+              text: msg.text,
+              timestamp: msg.created_at || msg.timestamp || null,
+              agentic: msg
+            });
+          } else if (msg.status === 'completed') {
+            console.log('[DEBUG] Processing completed status message');
             let botText = '';
-            
             if (msg.response && msg.response.trim() && msg.response !== 'null') {
-              // Có response trực tiếp
               botText = msg.response;
             } else if (msg.execution_results?.summary) {
-              // Tạo summary từ execution_results
               const summary = msg.execution_results.summary;
               const steps = summary.total_steps_completed || 0;
               const filesProcessed = summary.files_processed || 0;
-              
               botText = `✅ **Đã hoàn thành ${steps} bước xử lý**\n📁 **Đã xử lý ${filesProcessed} file**`;
-              
-              // Thêm thông tin chi tiết các action
               if (summary.actions_performed && summary.actions_performed.length > 0) {
                 botText += '\n\n🔧 **Các hành động đã thực hiện:**\n';
                 summary.actions_performed.forEach((action) => {
                   botText += `  • ${action.description}: ${action.status === 'success' ? '✅ Thành công' : '❌ Thất bại'}\n`;
                 });
               }
-              
-              // Thêm chain of thought nếu có
               if (msg.execution_results.chain_of_thought) {
                 botText += `\n\n🧠 **Quá trình suy nghĩ:**\n${msg.execution_results.chain_of_thought}`;
               }
@@ -131,18 +132,19 @@ export const ChatSessionProvider = ({ children }) => {
             } else {
               botText = '✅ **Đã hoàn thành xử lý yêu cầu của bạn.**';
             }
-            
+            console.log('[DEBUG] Adding completed bot message:', botText);
             msgs.push({
               sender: 'bot',
               text: botText,
-              timestamp: msg.completed_at || msg.created_at || null,
+              timestamp: msg.completed_at || msg.created_at || msg.timestamp || null,
               agentic: msg
             });
           } else if (msg.status === 'failed') {
+            console.log('[DEBUG] Adding failed bot message');
             msgs.push({
               sender: 'bot',
               text: `❌ **Xử lý thất bại**\n${msg.error_message || 'Có lỗi xảy ra trong quá trình xử lý.'}`,
-              timestamp: msg.created_at || null,
+              timestamp: msg.created_at || msg.timestamp || null,
               agentic: msg
             });
           }
@@ -150,7 +152,7 @@ export const ChatSessionProvider = ({ children }) => {
       } else {
         // Load chat messages thường
         const msgsRaw = await getChatMessages(sessionId);
-        // Chuẩn hóa: mỗi object thành 2 message (user và bot)
+        // Chuẩn hóa: mỗi object thành 2 message (user và bot, luôn có user trước, bot sau nếu có)
         msgsRaw.forEach(msg => {
           if (msg.message) {
             msgs.push({
@@ -158,15 +160,16 @@ export const ChatSessionProvider = ({ children }) => {
               text: msg.message,
               timestamp: msg.created_at || null,
             });
-          }
-          if (msg.response && msg.response.trim() !== '') {
-            msgs.push({
-              sender: 'bot',
-              text: msg.response,
-              timestamp: msg.created_at || null,
-            });
+            if (msg.response && msg.response.trim() !== '') {
+              msgs.push({
+                sender: 'bot',
+                text: msg.response,
+                timestamp: msg.updated_at || msg.created_at || null,
+              });
+            }
           }
         });
+        console.log('[DEBUG][FINAL] Processed messages:', msgs);
       }
       
       console.log('[DEBUG] Processed messages:', msgs);

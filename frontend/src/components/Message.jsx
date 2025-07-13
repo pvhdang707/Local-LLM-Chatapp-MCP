@@ -73,8 +73,8 @@ const Message = ({ message, onDownload }) => {
       {!isUser && <div className="mr-2 flex-shrink-0 flex items-end">{avatar}</div>}
       <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[75%]`}>
         <ChatMessage 
-          isUser={isUser} 
-          message={text} 
+          isUser={isUser}
+          message={message}
           enhanced={enhanced}
           onDownload={onDownload}
         />

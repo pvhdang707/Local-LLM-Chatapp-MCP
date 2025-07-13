@@ -8,17 +8,11 @@ const ChatMessage = ({ isUser, message, enhanced = null, agentic = null, onDownl
   // Xử lý nội dung tin nhắn
   let displayMessage = '';
   if (isUser) {
-    displayMessage = message.user_request || message.text || '';
+    // For user messages, use the text directly
+    displayMessage = message.text || '';
   } else {
-    if (message.response) {
-      displayMessage = message.response;
-    } else if (message.execution_results?.chain_of_thought) {
-      displayMessage = message.execution_results.chain_of_thought;
-    } else if (message.summary) {
-      displayMessage = message.summary;
-    } else {
-      displayMessage = 'Hệ thống đã xử lý yêu cầu của bạn.';
-    }
+    // For bot messages, use the text directly since it's already processed
+    displayMessage = message.text || 'Hệ thống đã xử lý yêu cầu của bạn.';
   }
 
   return (
