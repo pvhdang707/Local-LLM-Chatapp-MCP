@@ -7,6 +7,7 @@ from src.cloud_integration import cloud_integration
 from src.file_manager import file_manager
 from src.file_reasoner import generate_chain_of_thought
 from src.feedback_store import load_feedback
+from src.file_comparator import file_comparator
 
 chat_bp = Blueprint('chat', __name__)
 
@@ -304,8 +305,72 @@ def send_message(session_id):
             return jsonify({'error': 'Message không được để trống'}), 400
         # Kiểm tra xem có phải là câu hỏi tìm kiếm file không
         search_keywords = ['tìm', 'file', 'tài liệu', 'document', 'search', 'find']
+        comparison_keywords = ['so sánh', 'compare', 'khác biệt', 'difference', 'vs', 'versus']
+        
         is_file_search = any(keyword in message.lower() for keyword in search_keywords)
-        if is_file_search:
+        is_file_comparison = any(keyword in message.lower() for keyword in comparison_keywords)
+        
+        if is_file_comparison:
+            # Xử lý so sánh file
+            user_id = request.user['user_id']
+            user_role = request.user['role']
+            
+            # Tìm file phù hợp để so sánh
+            files_to_compare = file_comparator.find_files_for_comparison(message, user_id, user_role)
+            print(f"[DEBUG][send_message] Files to compare: {files_to_compare}")
+            
+            if len(files_to_compare) < 2:
+                response = "Không tìm đủ file để so sánh. Vui lòng thử lại với từ khóa cụ thể hơn."
+                return jsonify({
+                    'success': True,
+                    'response': response,
+                    'is_file_comparison': True,
+                    'files_found': len(files_to_compare)
+                })
+            
+            # Lấy ID của các file để so sánh (tối đa 3 file)
+            file_ids = [f['id'] for f in files_to_compare[:3]]
+            
+            # Thực hiện so sánh
+            comparison_result = file_comparator.compare_files(file_ids, "ai_summary")
+            
+            if comparison_result['success']:
+                files_info = []
+                for f in files_to_compare[:3]:
+                    file_info = file_manager.get_file_by_id(f['id'])
+                    if file_info:
+                        file_url = f"/api/user/files/download/{f['id']}"
+                        files_info.append({
+                            'id': f['id'],
+                            'name': file_info['original_name'],
+                            'type': file_info['file_type'],
+                            'download_url': file_url,
+                            'match_score': f.get('match_score', 0)
+                        })
+                
+                response = f"✅ **So sánh {len(files_info)} file:**\n\n"
+                for i, file_info in enumerate(files_info, 1):
+                    response += f"{i}. **{file_info['name']}** ({file_info['type']}) - [Tải về]({file_info['download_url']})\n"
+                
+                response += f"\n📋 **Kết quả so sánh:**\n{comparison_result['ai_analysis']}"
+                
+                return jsonify({
+                    'success': True,
+                    'response': response,
+                    'is_file_comparison': True,
+                    'comparison_result': comparison_result,
+                    'files': files_info
+                })
+            else:
+                response = f"Lỗi khi so sánh file: {comparison_result.get('error', 'Unknown error')}"
+                return jsonify({
+                    'success': True,
+                    'response': response,
+                    'is_file_comparison': True,
+                    'error': comparison_result.get('error')
+                })
+                
+        elif is_file_search:
             # 1. Trả về thông báo đang tìm kiếm (nếu muốn streaming thì yield, ở đây trả về sau cùng)
             # 2. Tìm file với lọc theo quyền truy cập
             user_id = request.user['user_id']
@@ -345,12 +410,14 @@ def send_message(session_id):
                 # 5. Chuẩn bị dữ liệu trả về
                 file_url = f"/api/user/files/download/{file_info['id']}"
                 files_found.append({
+                    'id': result['id'],
                     'name': file_info['original_name'],
                     'type': file_info['file_type'],
                     'uploaded_by': file_info['uploaded_by'],
                     'match_score': result['match_score'],
                     'download_url': file_url,
-                    'classification': classification
+                    'classification': classification,
+                    'content_preview': result.get('content_preview', '')
                 })
             #CoT
             chain_of_thought = generate_chain_of_thought(files_found, message)
@@ -485,6 +552,8 @@ def delete_chat_session(session_id):
         
         if result['success']:
             return jsonify(result)
+        elif result.get('message') == 'Chat session không tồn tại':
+            return jsonify(result), 404
         else:
             return jsonify(result), 400
             
@@ -897,39 +966,40 @@ def chat_enhanced():
             if search_results['total_results'] > 0:
                 files_found = []
                 for result in search_results['results'][:5]:  # Lấy 5 kết quả đầu
+                    file_id = result.get('id')
+                    file_url = f"/api/user/files/download/{file_id}" if file_id else None
                     files_found.append({
                         'name': result['name'],
                         'type': result['type'],
                         'uploaded_by': result['uploaded_by'],
-                        'match_score': result['match_score']
+                        'match_score': result['match_score'],
+                        'download_url': file_url
                     })
-                
                 response = f"Đã tìm thấy {search_results['total_results']} file phù hợp:\n"
                 for i, file_info in enumerate(files_found, 1):
                     response += f"{i}. {file_info['name']} ({file_info['type']}) - Điểm: {file_info['match_score']}\n"
-                
                 # Gửi metadata lên cloud cho các file tìm được
                 for result in search_results['results']:
                     try:
                         file_info = file_manager.get_file_by_id(result['id'])
                         if file_info:
-                            # Lấy classification nếu có
                             metadata_result = cloud_integration.get_metadata_from_cloud(result['id'])
                             classification = metadata_result.get('metadata', {}).get('classification', {})
-                            
-                            # Gửi metadata
                             cloud_integration.send_metadata_to_cloud(file_info, classification)
                     except Exception as e:
                         print(f"Error sending metadata for file {result['id']}: {e}")
-                
+                # Sinh chain of thought
+                from src.file_reasoner import generate_chain_of_thought
+                chain_of_thought = generate_chain_of_thought(files_found, message)
             else:
                 response = "Không tìm thấy file nào phù hợp với yêu cầu của bạn."
-            
+                chain_of_thought = "Không tìm thấy file nào phù hợp với yêu cầu."
             return jsonify({
                 'success': True,
                 'response': response,
                 'search_results': search_results,
-                'is_file_search': True
+                'is_file_search': True,
+                'chain_of_thought': chain_of_thought
             })
         else:
             # Sử dụng chat thông thường

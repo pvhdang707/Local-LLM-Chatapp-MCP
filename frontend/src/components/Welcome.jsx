@@ -11,10 +11,6 @@ const Welcome = ({ onCreateNewChat }) => {
     {
       title: "Phân loại tài liệu", 
       description: "Phân loại và tổ chức các tài liệu theo chủ đề"
-    },
-    {
-      title: "Tóm tắt nội dung",
-      description: "Tóm tắt các tài liệu dài thành các điểm chính"
     }
   ];
 
@@ -35,7 +31,7 @@ const Welcome = ({ onCreateNewChat }) => {
       {/* Examples */}
       <div className="w-full max-w-4xl">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Tính năng chính</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {examples.map((example, index) => (
             <div
               key={index}

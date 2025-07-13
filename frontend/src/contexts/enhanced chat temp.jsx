@@ -1,50 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { chatEnhanced } from '../services/chatApi';
-import { agenticPlanAndExecute } from '../services/agenticApi';
 
 const EnhancedChatContext = createContext();
-
-// Hàm tổng hợp message trả lời từ Agentic AI
-function formatAgenticAIResponse(agenticObj) {
-  if (!agenticObj || !agenticObj.execution_results) return 'Không có phản hồi';
-  const exec_results = agenticObj.execution_results;
-  let files = [];
-  let classifications = [];
-  let query = '';
-  if (agenticObj.plan && agenticObj.plan.plan && agenticObj.plan.plan[0]?.parameters?.query) {
-    query = agenticObj.plan.plan[0].parameters.query;
-  }
-  for (const step of exec_results.execution_results || []) {
-    if (step.step?.action === 'search_files') {
-      files = step.result.files || [];
-    }
-    if (step.step?.action === 'classify_files') {
-      classifications = step.result.classifications || [];
-    }
-  }
-  let msg = `🔍 Đã tìm thấy ${files.length} file phù hợp với truy vấn "${query}":\n`;
-  files.forEach((f, idx) => {
-    msg += `${idx + 1}. ${f.name} (${f.type}) - Điểm: ${f.match_score}\n`;
-    if (f.content_preview) {
-      msg += `   ➡️ Preview: ${f.content_preview.slice(0, 60)}...\n`;
-    }
-  });
-  msg += "\n📂 Kết quả phân loại:\n";
-  classifications.forEach(c => {
-    const fname = files.find(f => f.id === c.file_id)?.name || c.file_id;
-    const cl = c.classification;
-    if (cl?.note) {
-      msg += `- ${fname}: ${cl.group_name} (${cl.note})\n`;
-    } else {
-      msg += `- ${fname}: ${cl?.group_name || cl?.group_id || '?'} (AI)\n`;
-    }
-  });
-  const cot = exec_results.chain_of_thought;
-  if (cot) {
-    msg += `\n🧠 Quá trình AI suy luận:\n${cot}\n`;
-  }
-  return msg;
-}
 
 export const EnhancedChatProvider = ({ children }) => {
   // Enhanced Chat State
@@ -135,10 +92,11 @@ export const EnhancedChatProvider = ({ children }) => {
         await new Promise(resolve => setTimeout(resolve, 200));
       }
 
-      // Gọi Agentic AI thay cho chatEnhanced
-      const response = await agenticPlanAndExecute(message);
-      // Sinh message trả lời tự nhiên
-      const naturalResponse = formatAgenticAIResponse(response);
+      // Call Enhanced Chat API
+      const response = await chatEnhanced(message, {
+        search_files: enhancedSettings.searchFiles,
+        include_classification: enhancedSettings.includeClassification
+      });
 
       // Step 5: Completed
       setProcessingSteps(prev => [...prev, ENHANCED_STEPS.COMPLETED]);
@@ -147,8 +105,7 @@ export const EnhancedChatProvider = ({ children }) => {
       const enhancedResult = {
         id: Date.now(),
         message,
-        response: response, // response từ Agentic AI
-        naturalResponse, // message trả lời tự nhiên
+        response: response,
         timestamp: new Date().toISOString(),
         mode: 'enhanced',
         sessionId
@@ -171,6 +128,7 @@ export const EnhancedChatProvider = ({ children }) => {
       if (retryCountRef.current < 2) {
         retryCountRef.current += 1;
         console.log(`[ENHANCED CHAT] Retrying... (${retryCountRef.current}/2)`);
+        
         // Retry after 2 seconds
         processingTimeoutRef.current = setTimeout(() => {
           processEnhancedChat(message, sessionId);

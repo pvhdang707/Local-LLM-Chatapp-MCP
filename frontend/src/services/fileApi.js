@@ -49,21 +49,20 @@ export const validateFile = (file) => {
   };
 };
 
-// Upload file
-export const uploadFile = async (file) => {
+// Upload file với department support
+export const uploadFile = async (file, department = null) => {
   try {
-    // Validate file trước khi upload
-    const validation = validateFile(file);
-    if (!validation.isValid) {
-      throw new Error(validation.errors.join(', '));
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('Chưa đăng nhập');
     }
 
     const formData = new FormData();
     formData.append('file', file);
-
-    const token = getAuthToken();
-    if (!token) {
-      throw new Error('Chưa đăng nhập');
+    
+    // FIX: Đảm bảo gửi kèm department nếu có
+    if (department) {
+      formData.append('department', department);
     }
 
     const response = await fetch(`${API_URL}/user/files`, {
@@ -87,8 +86,8 @@ export const uploadFile = async (file) => {
   }
 };
 
-// Upload nhiều file cùng lúc
-export const uploadFilesBatch = async (files) => {
+// Upload nhiều file cùng lúc với department support
+export const uploadFilesBatch = async (files, department = null) => {
   try {
     // Validate tất cả files trước khi upload
     const validationResults = files.map(file => ({
@@ -108,6 +107,11 @@ export const uploadFilesBatch = async (files) => {
     files.forEach(file => {
       formData.append('files', file);
     });
+    
+    // Thêm department nếu có
+    if (department) {
+      formData.append('department', department);
+    }
 
     const token = getAuthToken();
     if (!token) {
@@ -135,7 +139,7 @@ export const uploadFilesBatch = async (files) => {
   }
 };
 
-// Lấy danh sách file của user
+// Lấy danh sách file của user (với department filtering)
 export const getUserFiles = async () => {
   try {
     const token = getAuthToken();
@@ -164,7 +168,7 @@ export const getUserFiles = async () => {
   }
 };
 
-// Lấy danh sách file với thông tin chi tiết (phân loại, metadata)
+// Lấy danh sách file với thông tin chi tiết (phân loại, metadata, department)
 export const getUserFilesEnhanced = async () => {
   try {
     const token = getAuthToken();
@@ -189,6 +193,71 @@ export const getUserFilesEnhanced = async () => {
     return data.files;
   } catch (error) {
     console.error('Error getting enhanced user files:', error);
+    throw error;
+  }
+};
+
+// Lấy danh sách file hoàn chỉnh: kết hợp file của user + file thuộc phòng ban
+export const getUserFilesComplete = async () => {
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('Chưa đăng nhập');
+    }
+
+    // Lấy cả 2 danh sách file
+    const [departmentFiles, userFilesEnhanced] = await Promise.all([
+      getUserFiles(), // File thuộc phòng ban
+      getUserFilesEnhanced() // File của user với thông tin chi tiết
+    ]);
+
+    // Tạo Map để loại bỏ trùng lặp dựa trên file ID
+    const fileMap = new Map();
+    
+    // Thêm file từ department trước (có thể thiếu thông tin chi tiết)
+    departmentFiles.forEach(file => {
+      fileMap.set(file.id, {
+        ...file,
+        source: 'department' // Đánh dấu nguồn gốc
+      });
+    });
+    
+    // Cập nhật/Thêm file từ user enhanced (có thông tin chi tiết)
+    userFilesEnhanced.forEach(file => {
+      const existingFile = fileMap.get(file.id);
+      if (existingFile) {
+        // Cập nhật thông tin chi tiết cho file đã tồn tại
+        fileMap.set(file.id, {
+          ...existingFile,
+          ...file,
+          source: 'both' // File có cả 2 nguồn
+        });
+      } else {
+        // Thêm file mới từ user
+        fileMap.set(file.id, {
+          ...file,
+          source: 'user' // Đánh dấu nguồn gốc
+        });
+      }
+    });
+
+    // Chuyển Map thành Array và sắp xếp theo thời gian upload
+    const completeFiles = Array.from(fileMap.values()).sort((a, b) => {
+      const dateA = new Date(a.uploaded_at || 0);
+      const dateB = new Date(b.uploaded_at || 0);
+      return dateB - dateA; // Sắp xếp mới nhất trước
+    });
+
+    console.log('[FILE API] Complete files loaded:', {
+      total: completeFiles.length,
+      fromDepartment: departmentFiles.length,
+      fromUser: userFilesEnhanced.length,
+      unique: fileMap.size
+    });
+
+    return completeFiles;
+  } catch (error) {
+    console.error('Error getting complete user files:', error);
     throw error;
   }
 };
@@ -251,6 +320,36 @@ export const classifyFile = async (fileId) => {
   }
 };
 
+// Phân loại nhiều file cùng lúc
+export const classifyFilesBatch = async (fileIds) => {
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('Chưa đăng nhập');
+    }
+
+    const response = await fetch(`${API_URL}/files/classify/batch`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ file_ids: fileIds }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Có lỗi xảy ra khi phân loại files');
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error classifying files batch:', error);
+    throw error;
+  }
+};
+
 // Lấy metadata của file
 export const getFileMetadata = async (fileId) => {
   try {
@@ -276,6 +375,36 @@ export const getFileMetadata = async (fileId) => {
     return data.metadata;
   } catch (error) {
     console.error('Error getting file metadata:', error);
+    throw error;
+  }
+};
+
+// Gửi metadata của nhiều files lên cloud
+export const sendMetadataBatch = async (fileIds) => {
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('Chưa đăng nhập');
+    }
+
+    const response = await fetch(`${API_URL}/files/metadata/batch`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ file_ids: fileIds }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Có lỗi xảy ra khi gửi metadata');
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error sending metadata batch:', error);
     throw error;
   }
 };
@@ -310,14 +439,14 @@ export const getFileGroups = async () => {
 };
 
 // Tải xuống file
-export const downloadFile = async (fileId) => {
+export const downloadFile = async (fileId, filename = null) => {
   try {
     const token = localStorage.getItem('token');
     if (!token) {
       throw new Error('Chưa đăng nhập');
     }
 
-    console.log('Starting download for file:', fileId);
+    console.log('Starting download for file:', fileId, 'with filename:', filename);
 
     // Sử dụng fetch trực tiếp giống như adminApi.uploadFileWithPermissions
     const response = await fetch(`${API_URL}/user/files/download/${fileId}`, {
@@ -346,7 +475,7 @@ export const downloadFile = async (fileId) => {
     // Tạo link tải xuống
     const link = document.createElement('a');
     link.href = url;
-    link.download = ''; // Để browser tự động đặt tên file
+    link.download = filename || ''; // Sử dụng tên file được truyền vào hoặc để browser tự động đặt tên
     
     // Thêm link vào DOM và click
     document.body.appendChild(link);
@@ -364,4 +493,72 @@ export const downloadFile = async (fileId) => {
   }
 };
 
-export { UPLOAD_CONFIG }; 
+// Tìm kiếm file
+export const searchFiles = async (query, searchType = 'both', limit = 20) => {
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('Chưa đăng nhập');
+    }
+
+    const response = await fetch(`${API_URL}/search/files`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query,
+        search_type: searchType,
+        limit
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Có lỗi xảy ra khi tìm kiếm file');
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error searching files:', error);
+    throw error;
+  }
+};
+
+// Enhanced chat với file
+export const enhancedChat = async (message, searchFiles = true, includeClassification = true) => {
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('Chưa đăng nhập');
+    }
+
+    const response = await fetch(`${API_URL}/chat/enhanced`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message,
+        search_files: searchFiles,
+        include_classification: includeClassification
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Có lỗi xảy ra khi chat');
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error in enhanced chat:', error);
+    throw error;
+  }
+};
+
+export { UPLOAD_CONFIG };

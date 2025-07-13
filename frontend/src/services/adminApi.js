@@ -9,14 +9,24 @@ export const adminApi = {
     return apiCall(`/admin/users?page=${page}&per_page=${perPage}`, 'GET');
   },
 
-  // Tạo user mới
+  // Tạo user mới - cập nhật để hỗ trợ department
   createUser: async (userData) => {
-    return apiCall('/admin/register_user', 'POST', userData);
+    return apiCall('/admin/register_user', 'POST', {
+      username: userData.username,
+      password: userData.password,
+      role: userData.role,
+      department: userData.department // Thêm department
+    });
   },
 
   // Cập nhật thông tin user
   updateUser: async (userId, userData) => {
     return apiCall(`/admin/users/${userId}`, 'PUT', userData);
+  },
+
+  // Cập nhật department của user - MỚI
+  updateUserDepartment: async (userId, department) => {
+    return apiCall(`/admin/users/${userId}/department`, 'PUT', { department });
   },
 
   // Xóa user
@@ -48,15 +58,18 @@ export const adminApi = {
     return apiCall('/user/files/enhanced', 'GET');
   },
 
-  // Upload file với phân quyền
+  // Upload file với phân quyền và department
   uploadFileWithPermissions: async (formData) => {
     const token = localStorage.getItem('token');
     const url = `${API_URL}/admin/upload_file`;
+    
+    // FIX: Đảm bảo department được gửi trong formData
     
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`
+        // Không set Content-Type để browser tự động set với boundary cho FormData
       },
       body: formData
     });
@@ -96,8 +109,19 @@ export const adminApi = {
   },
 
   // Tải xuống file
-  downloadFile: async (fileId) => {
-    return apiCall(`/user/files/download/${fileId}`, 'GET', null, { responseType: 'blob' });
+  downloadFile: async (fileId, filename = null) => {
+    const response = await apiCall(`/user/files/download/${fileId}`, 'GET', null, { responseType: 'blob' });
+    // Tạo blob URL và download với tên file đúng
+    const blob = new Blob([response]);
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename || '';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    return { success: true };
   },
 
   // Phân loại file
@@ -149,4 +173,4 @@ export const adminApi = {
       };
     }
   }
-}; 
+};

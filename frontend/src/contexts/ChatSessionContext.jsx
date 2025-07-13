@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
-import { getChatSessions, getChatMessages, createChatSession, sendChatMessage } from '../services/api';
+import { getChatSessions, getChatMessages, createChatSession, sendChatMessage, deleteChatSession } from '../services/api';
 import { useEnhancedChat } from './EnhancedChatContext';
 
 const ChatSessionContext = createContext();
@@ -149,7 +149,17 @@ export const ChatSessionProvider = ({ children }) => {
       setMessages(prev => [...prev, userMsg]);
       console.log('[LOG] Đã thêm message user vào UI:', userMsg);
 
-      // 2. Xử lý tin nhắn dựa trên mode
+      // 2. Thêm message bot tạm thời (loading)
+      const loadingBotMsg = {
+        sender: 'bot',
+        text: 'AI đang suy nghĩ...',
+        timestamp: new Date().toISOString(),
+        mode: mode,
+        isLoading: true
+      };
+      setMessages(prev => [...prev, loadingBotMsg]);
+
+      // 3. Xử lý tin nhắn dựa trên mode
       let res;
       if (mode === 'enhanced') {
         console.log('[LOG] Gửi message enhanced:', text, 'với sessionId:', sessionId);
@@ -164,20 +174,37 @@ export const ChatSessionProvider = ({ children }) => {
       }
       console.log('[LOG] Kết quả trả về từ backend:', res);
 
-      // 3. Nếu backend trả về response từ bot, push tiếp vào UI
-      if (res && (res.response || res.text)) {
-        setMessages(prev => [
-          ...prev,
-          {
+      // 4. Khi có kết quả, thay thế message bot tạm thời bằng câu trả lời thật
+      setMessages(prev => {
+        // Tìm vị trí message bot loading cuối cùng
+        const idx = prev.map(m => m.isLoading).lastIndexOf(true);
+        if (idx !== -1) {
+          const newMsgs = [...prev];
+          newMsgs[idx] = {
             sender: 'bot',
             text: res.response || res.text,
             timestamp: new Date().toISOString(),
             enhanced: res.enhanced || null,
-            mode: mode
-          }
-        ]);
-        console.log('[LOG] Đã thêm message bot vào UI:', res.response || res.text);
-      }
+            mode: mode,
+            isLoading: false
+          };
+          return newMsgs;
+        } else {
+          // Nếu không tìm thấy, thêm mới
+          return [
+            ...prev,
+            {
+              sender: 'bot',
+              text: res.response || res.text,
+              timestamp: new Date().toISOString(),
+              enhanced: res.enhanced || null,
+              mode: mode,
+              isLoading: false
+            }
+          ];
+        }
+      });
+      console.log('[LOG] Đã cập nhật/thay thế message bot loading bằng câu trả lời thật');
 
       if (justCreatedSession && createdSession) {
         setSelectedSessionId(createdSession.id);
@@ -186,6 +213,8 @@ export const ChatSessionProvider = ({ children }) => {
     } catch (err) {
       console.error('[CHAT SESSION] Error sending message:', err);
       setError({ type: 'send_message', message: 'Lỗi gửi tin nhắn.' });
+      // Nếu lỗi, loại bỏ message bot loading
+      setMessages(prev => prev.filter(m => !m.isLoading));
     } finally {
       setIsLoadingChat(false);
     }
@@ -207,6 +236,22 @@ export const ChatSessionProvider = ({ children }) => {
     }
   }, []);
 
+  // Xóa session và reload lại danh sách
+  const deleteSession = useCallback(async (sessionId) => {
+    try {
+      await deleteChatSession(sessionId);
+      // Nếu session đang chọn bị xóa, bỏ chọn
+      if (selectedSessionId === sessionId) {
+        setSelectedSessionId(null);
+        setMessages([]);
+      }
+      // Reload lại danh sách session
+      await loadSessions(true);
+    } catch (err) {
+      setError({ type: 'delete_session', message: 'Lỗi xóa cuộc trò chuyện.' });
+    }
+  }, [selectedSessionId, loadSessions]);
+
   return (
     <ChatSessionContext.Provider
       value={{
@@ -225,6 +270,7 @@ export const ChatSessionProvider = ({ children }) => {
         createSession,
         startNewSession,
         updateSession,
+        deleteSession, // Thêm vào context
       }}
     >
       {children}

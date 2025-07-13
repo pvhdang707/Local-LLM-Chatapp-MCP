@@ -96,8 +96,7 @@ swagger_template = {
         },
         {
             "name": "Agentic AI",
-            "description": "Agentic AI features"
-        },
+            "description": "Agentic AI features"        },
         {
             "name": "Agentic AI Sessions",
             "description": "Agentic AI session management"
@@ -105,6 +104,10 @@ swagger_template = {
         {
             "name": "Feedback",
             "description": "Feedback system for file classification"
+        },
+        {
+            "name": "File Comparison",
+            "description": "File comparison and analysis features"
         }
     ]
 }
@@ -131,6 +134,7 @@ if __name__ == '__main__':
     print("- /api/enhanced_chat/* - Enhanced chat endpoints")
     print("- /api/agentic_ai/* - Agentic AI endpoints")
     print("- /api/feedback/* - Feedback endpoints")
+    print("- /api/comparison/* - File comparison endpoints")
     print("\nSwagger UI available at: http://localhost:5000/apidocs/")
     
     app.run(host='0.0.0.0', port=port, debug=True) 

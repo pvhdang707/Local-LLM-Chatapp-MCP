@@ -172,4 +172,15 @@ export async function updateSessionTitle(sessionId, title) {
     console.error('Error updating session title:', error);
     throw error;
   }
+}
+
+// Feedback API
+export async function submitFeedback(feedbackData) {
+  try {
+    const res = await apiClient.post('/feedback', feedbackData);
+    return res.data;
+  } catch (error) {
+    console.error('Error submitting feedback:', error);
+    throw error;
+  }
 } 

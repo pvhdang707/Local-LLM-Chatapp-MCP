@@ -1,23 +1,22 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useChatSession } from '../contexts/ChatSessionContext';
 
-const DebugPanel = ({ isVisible }) => {
+const DebugPanel = ({ isVisible, onToggle }) => {
   const { user, isAuthenticated } = useAuth();
-  const { sessions, selectedSessionId, messages, isLoading, error, isComposingNew } = useChatSession();
-  const [expanded, setExpanded] = useState(false);
+  const { sessions, selectedSessionId, messages, isLoading, isComposingNew } = useChatSession();
 
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 bg-white border border-gray-300 rounded-lg shadow-lg p-4 max-w-md z-50">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-gray-700">🔧 Debug Panel</h3>
+    <div className="fixed bottom-4 right-4 bg-white border border-gray-300 rounded-lg shadow-lg p-4 max-w-sm z-50">
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="text-sm font-semibold text-gray-700">Debug Info</h3>
         <button
-          onClick={() => setExpanded(!expanded)}
-          className="text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300"
+          onClick={onToggle}
+          className="text-gray-500 hover:text-gray-700 text-sm"
         >
-          {expanded ? 'Thu gọn' : 'Mở rộng'}
+          ✕
         </button>
       </div>
       
@@ -32,7 +31,10 @@ const DebugPanel = ({ isVisible }) => {
         {user && (
           <div className="flex justify-between">
             <span>User:</span>
-            <span className="text-blue-600">{user.username} ({user.role})</span>
+            <span className="text-blue-600">
+              {user.username} ({user.role})
+              {user.department && ` - ${user.department}`}
+            </span>
           </div>
         )}
         
@@ -74,27 +76,14 @@ const DebugPanel = ({ isVisible }) => {
           </span>
         </div>
         
-        {error && (
+        {/* Thêm thông tin department */}
+        {user && user.department && (
           <div className="flex justify-between">
-            <span>Error:</span>
-            <span className="text-red-600">{error.type}</span>
+            <span>Department:</span>
+            <span className="text-green-600">{user.department}</span>
           </div>
         )}
       </div>
-      
-      {expanded && (
-        <div className="mt-3 pt-3 border-t border-gray-200">
-          <div className="text-xs">
-            <div className="font-semibold mb-1">Sessions:</div>
-            {sessions?.map(session => (
-              <div key={session.id} className="ml-2 text-gray-600">
-                • {session.title || session.id.slice(-8)} 
-                {selectedSessionId === session.id && ' (selected)'}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

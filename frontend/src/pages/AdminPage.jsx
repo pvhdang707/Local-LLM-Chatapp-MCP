@@ -35,6 +35,7 @@ const AdminPage = () => {
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadPermissions, setUploadPermissions] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploadDepartment, setUploadDepartment] = useState('');
   
   // State cho filter và tìm kiếm file
   const [fileFilters, setFileFilters] = useState({
@@ -241,6 +242,8 @@ const AdminPage = () => {
                 loadFiles={loadFiles}
                 selectedFiles={selectedFiles}
                 setSelectedFiles={setSelectedFiles}
+                uploadDepartment={uploadDepartment}
+                setUploadDepartment={setUploadDepartment}
               />
             )}
 

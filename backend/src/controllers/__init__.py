@@ -11,6 +11,7 @@ from .public_chat_controller import public_chat_bp
 from .enhanced_chat_controller import enhanced_chat_bp
 from .agentic_ai_controller import agentic_ai_bp
 from .feedback import feedback_bp
+from .comparison_controller import comparison_bp
 
 # Danh sách tất cả blueprints
 all_blueprints = [
@@ -24,5 +25,6 @@ all_blueprints = [
     enhanced_chat_bp,
     agentic_ai_bp,
     feedback_bp,
+    comparison_bp,
     
-] 
+]

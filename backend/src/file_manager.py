@@ -47,7 +47,7 @@ class FileManager:
             print(f"Error saving files database: {e}")
 
     def add_file(self, file, uploaded_by: str, department: str = None) -> Dict:
-        """Thêm file mới với phân loại và index"""
+        """Thêm file mới với phân loại và index - FIX: Đảm bảo department được lưu"""
         try:
             if not file or file.filename == '':
                 return {"success": False, "message": "Không có file được chọn"}
@@ -89,6 +89,7 @@ class FileManager:
             # Lưu thông tin file vào database
             db = next(get_db())
             try:
+                # FIX: Đảm bảo department được truyền và lưu đúng
                 file_info = DBFile(
                     id=str(uuid.uuid4()),
                     original_name=file.filename,
@@ -97,7 +98,7 @@ class FileManager:
                     file_size=os.path.getsize(file_path),
                     file_type=file.content_type or "unknown",
                     uploaded_by=uploaded_by,
-                    department=department,
+                    department=department,  # FIX: Đảm bảo department được lưu
                     uploaded_at=datetime.utcnow(),
                     is_active=True
                 )
@@ -105,6 +106,8 @@ class FileManager:
                 db.add(file_info)
                 db.commit()
                 db.refresh(file_info)
+
+                print(f"[DEBUG] File saved with department: {department}")  # Debug log
 
                 # Cập nhật search index
                 file_search_engine.update_index(file_info.id)
@@ -157,6 +160,7 @@ class FileManager:
                         "file_size": file_info.file_size,
                         "file_type": file_info.file_type,
                         "uploaded_by": file_info.uploaded_by,
+                        "department": file_info.department,  # FIX: Trả về department
                         "uploaded_at": file_info.uploaded_at.isoformat() if file_info.uploaded_at else None
                     },
                     "classification": classification,
@@ -176,7 +180,7 @@ class FileManager:
         except Exception as e:
             return {"success": False, "message": f"Lỗi khi upload file: {str(e)}"}
 
-    def add_file_with_permissions(self, file, uploaded_by: str, allowed_users: List[str] = None) -> Dict:
+    def add_file_with_permissions(self, file, uploaded_by: str, allowed_users: List[str] = None, department: str = None) -> Dict:
         """Thêm file mới với phân quyền cho admin"""
         try:
             if not file or file.filename == '':
@@ -205,6 +209,7 @@ class FileManager:
                     file_size=os.path.getsize(file_path),
                     file_type=file.content_type or "unknown",
                     uploaded_by=uploaded_by,
+                    department=department,
                     uploaded_at=datetime.utcnow(),
                     is_active=True
                 )
@@ -264,6 +269,7 @@ class FileManager:
                     'file_size': file_info.file_size,
                     'file_type': file_info.file_type,
                     'uploaded_by': file_info.uploaded_by,
+                    'department': file_info.department,
                     'uploaded_at': file_info.uploaded_at.isoformat() if file_info.uploaded_at else None
                 }
                 cloud_result = cloud_integration.send_metadata_to_cloud(file_data, classification)
@@ -278,6 +284,7 @@ class FileManager:
                         "file_size": file_info.file_size,
                         "file_type": file_info.file_type,
                         "uploaded_by": file_info.uploaded_by,
+                        "department": file_info.department,
                         "uploaded_at": file_info.uploaded_at.isoformat() if file_info.uploaded_at else None
                     },
                     "classification": classification,
@@ -370,6 +377,7 @@ class FileManager:
                     "file_size": f.file_size,
                     "file_type": f.file_type,
                     "uploaded_by": f.uploaded_by,
+                    "department": f.department,
                     "uploaded_at": f.uploaded_at.isoformat() if f.uploaded_at else None,
                     "is_active": f.is_active
                 }
@@ -397,6 +405,7 @@ class FileManager:
                     "file_size": f.file_size,
                     "file_type": f.file_type,
                     "uploaded_by": f.uploaded_by,
+                    "department": f.department,
                     "uploaded_at": f.uploaded_at.isoformat() if f.uploaded_at else None,
                     "is_active": f.is_active
                 }
@@ -534,5 +543,42 @@ class FileManager:
         finally:
             db.close()
 
+    def get_files_by_user_and_department(self, username: str, user_department: str, user_role: str) -> List[Dict]:
+        """Lấy danh sách files mà user có thể thấy dựa trên department"""
+        db = next(get_db())
+        try:
+            if user_role == 'admin':
+                # Admin thấy tất cả file
+                files = db.query(DBFile).filter(DBFile.is_active == True).all()
+            else:
+                # User chỉ thấy file của department mình hoặc file mình upload
+                files = db.query(DBFile).filter(
+                    DBFile.is_active == True,
+                    db.or_(
+                        DBFile.department == user_department,  # File của department
+                        DBFile.uploaded_by == username         # File mình upload
+                    )
+                ).all()
+            
+            return [
+                {
+                    "id": f.id,
+                    "original_name": f.original_name,
+                    "stored_name": f.stored_name,
+                    "file_size": f.file_size,
+                    "file_type": f.file_type,
+                    "uploaded_by": f.uploaded_by,
+                    "department": f.department,
+                    "uploaded_at": f.uploaded_at.isoformat() if f.uploaded_at else None,
+                    "is_active": f.is_active
+                }
+                for f in files
+            ]
+        except Exception as e:
+            print(f"Error getting files by user and department: {e}")
+            return []
+        finally:
+            db.close()
+
 # Khởi tạo FileManager
-file_manager = FileManager() 
+file_manager = FileManager()

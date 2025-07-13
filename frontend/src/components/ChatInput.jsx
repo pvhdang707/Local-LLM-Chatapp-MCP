@@ -73,7 +73,7 @@ const ChatInput = ({
               onKeyDown={handleKeyDown}
               placeholder={
                 isLoading || isEnhancedProcessing 
-                  ? "Đang xử lý tin nhắn..." 
+                  ? "AI đang suy nghĩ..." 
                   : chatMode === 'enhanced'
                     ? "Nhập tin nhắn để tìm kiếm và phân tích file..."
                     : placeholder
@@ -129,7 +129,7 @@ const ChatInput = ({
             {(isLoading || isEnhancedProcessing) && (
               <span className="text-blue-500 flex items-center space-x-1">
                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
-                <span>{isEnhancedProcessing ? 'Đang xử lý enhanced chat...' : 'Đang xử lý tin nhắn...'}</span>
+                <span>AI đang suy nghĩ...</span>
               </span>
             )}
             

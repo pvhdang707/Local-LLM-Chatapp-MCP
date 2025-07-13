@@ -3,6 +3,8 @@ from src.auth import require_auth, require_admin
 from src.database import get_db, User as DBUser, File as DBFile
 from datetime import datetime
 import os
+import json
+from src.file_manager import file_manager  # IMPORT: file_manager
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -545,4 +547,51 @@ def get_system_stats():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     finally:
-        db.close() 
+        db.close()
+
+@admin_bp.route('/upload_file', methods=['POST'])
+@require_auth
+@require_admin
+def admin_upload_file():
+    """Admin upload file với phân quyền và department"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'Không có file nào được gửi'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'Không có file nào được chọn'}), 400
+        
+        username = request.user['username']
+        
+        # Lấy thông tin phân quyền và department từ form
+        permissions_str = request.form.get('permissions', '[]')
+        department = request.form.get('department')  # FIX: Lấy department
+        
+        try:
+            allowed_users = json.loads(permissions_str)
+        except json.JSONDecodeError:
+            allowed_users = []
+        
+        # FIX: Truyền department vào file_manager
+        result = file_manager.add_file_with_permissions(
+            file, 
+            username, 
+            allowed_users, 
+            department  # FIX: Truyền department
+        )
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'message': result['message'],
+                'file': result['file']
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'error': result['message']
+            }), 400
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

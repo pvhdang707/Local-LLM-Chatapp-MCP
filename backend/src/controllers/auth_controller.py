@@ -673,6 +673,7 @@ def get_all_users():
                 'id': str(user.id),
                 'username': user.username,
                 'role': user.role,
+                'department': user.department,
                 'created_at': user.created_at.isoformat() if user.created_at else None,
                 'is_active': user.is_active
             })

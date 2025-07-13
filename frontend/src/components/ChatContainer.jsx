@@ -9,7 +9,6 @@ import Loading from './Loading';
 import ChatStatus from './ChatStatus';
 import ChatInput from './ChatInput';
 import EnhancedChatToggle from './EnhancedChatToggle';
-import EnhancedProcessingModal from './EnhancedProcessingModal';
 import DebugPanel from './DebugPanel';
 import ChatAreaLoading from './ChatAreaLoading';
 import SessionLoading from './SessionLoading';
@@ -35,7 +34,8 @@ const ChatContainer = () => {
     startNewSession,
     isComposingNew,
     updateSession,
-    loadingSessionId
+    loadingSessionId,
+    deleteSession // Thêm vào destructure
   } = useChatSession();
 
   const { chatMode, isEnhancedProcessing } = useEnhancedChat();
@@ -110,12 +110,7 @@ const ChatContainer = () => {
   const handleDeleteChat = async (chatId) => {
     console.log('[CHAT CONTAINER] Xóa chat:', chatId);
     try {
-      // Nếu đang chọn session bị xóa, bỏ chọn
-      if (selectedSessionId === chatId) {
-        await selectSession(null);
-      }
-      // Reload danh sách sessions để cập nhật UI
-      await loadSessions();
+      await deleteSession(chatId); // Sử dụng hàm mới
     } catch (error) {
       console.error('[CHAT CONTAINER] Lỗi xóa chat:', error);
     }
@@ -333,7 +328,7 @@ const ChatContainer = () => {
         </div>
 
         {/* Chat Input - Bottom */}
-        {activeTab === 'chat' && sessions.length > 0 && (
+        {activeTab === 'chat' && sessions.length >= 0 && (
           <div className="border-t border-gray-200 bg-gray-50 p-6 w-full flex justify-center">
             <div className="w-full max-w-3xl">
               <ChatInput 
