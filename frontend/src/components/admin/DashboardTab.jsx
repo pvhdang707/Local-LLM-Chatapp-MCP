@@ -7,7 +7,7 @@ const DashboardTab = ({ systemStats, systemHealth, serverStatus, fileGroups }) =
       <h2 className="text-xl font-semibold mb-4">Dashboard</h2>
       
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="bg-blue-50 p-6 rounded-lg shadow">
           <div className="text-blue-500 text-4xl font-bold">{systemStats?.totalUsers || 0}</div>
           <div className="text-gray-700 mt-2">Tổng số người dùng</div>
@@ -16,16 +16,7 @@ const DashboardTab = ({ systemStats, systemHealth, serverStatus, fileGroups }) =
           <div className="text-green-500 text-4xl font-bold">{systemStats?.totalFiles || 0}</div>
           <div className="text-gray-700 mt-2">Tổng số file</div>
         </div>
-        <div className="bg-purple-50 p-6 rounded-lg shadow">
-          <div className="text-purple-500 text-4xl font-bold">{fileGroups.length}</div>
-          <div className="text-gray-700 mt-2">Nhóm file</div>
-        </div>
-        <div className="bg-orange-50 p-6 rounded-lg shadow">
-          <div className="text-orange-500 text-4xl font-bold">
-            {systemHealth?.status === 'healthy' ? '🟢' : '🔴'}
-          </div>
-          <div className="text-gray-700 mt-2">Trạng thái hệ thống</div>
-        </div>
+        
       </div>
 
       {/* System Health */}
