@@ -75,13 +75,16 @@ def get_users():
         
         user_list = []
         for user in users:
-            user_list.append({
+            user_data = {
                 'id': user.id,
                 'username': user.username,
                 'role': user.role,
                 'department': user.department,
+                'is_active': user.is_active,
                 'created_at': user.created_at.isoformat() if user.created_at else None
-            })
+            }
+            print(f"DEBUG: User {user.username} department: {user.department}")
+            user_list.append(user_data)
         
         return jsonify({
             'success': True,
@@ -163,6 +166,118 @@ def update_user_role(user_id):
                 'username': user.username,
                 'role': user.role,
                 'department': user.department
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+@admin_bp.route('/admin/users/<user_id>', methods=['PUT'])
+@require_auth
+@require_admin
+def update_user(user_id):
+    """
+    Cập nhật thông tin user (Admin only)
+    ---
+    tags:
+      - Admin
+    parameters:
+      - name: Authorization
+        in: header
+        type: string
+        required: true
+        description: "Bearer token JWT"
+      - name: user_id
+        in: path
+        type: string
+        required: true
+        description: ID của user
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            username:
+              type: string
+              description: "Username mới"
+              example: "new_username"
+            role:
+              type: string
+              description: "Role mới - user hoặc admin"
+              example: "admin"
+            department:
+              type: string
+              description: "Department mới - Sales, Tài chính, HR"
+              example: "Sales"
+            is_active:
+              type: boolean
+              description: "Trạng thái hoạt động"
+              example: true
+    responses:
+      200:
+        description: Cập nhật user thành công
+      400:
+        description: Dữ liệu không hợp lệ
+      401:
+        description: Không xác thực hoặc không có quyền admin
+      404:
+        description: User không tồn tại
+      500:
+        description: Lỗi server
+    """
+    try:
+        data = request.json
+        print(f"DEBUG: Received data for user {user_id}: {data}")
+        
+        db = next(get_db())
+        user = db.query(DBUser).filter(DBUser.id == user_id).first()
+        
+        if not user:
+            return jsonify({'error': 'User không tồn tại'}), 404
+        
+        print(f"DEBUG: Current user department: {user.department}")
+        
+        # Cập nhật username nếu có
+        if 'username' in data and data['username']:
+            user.username = data['username']
+        
+        # Cập nhật role nếu có
+        if 'role' in data and data['role'] in ['user', 'admin']:
+            user.role = data['role']
+        
+        # Cập nhật department nếu có
+        if 'department' in data:
+            print(f"DEBUG: Department from frontend: '{data['department']}' (type: {type(data['department'])})")
+            valid_departments = ["Sales", "Tài chính", "HR", None, ""]
+            print(f"DEBUG: Valid departments: {valid_departments}")
+            print(f"DEBUG: Is department in valid_departments: {data['department'] in valid_departments}")
+            if data['department'] in valid_departments:
+                user.department = data['department'] if data['department'] else None
+                print(f"DEBUG: Updated department to: {user.department}")
+            else:
+                print(f"DEBUG: Department '{data['department']}' not in valid_departments")
+        else:
+            print("DEBUG: No department field in data")
+        
+        # Cập nhật trạng thái hoạt động nếu có
+        if 'is_active' in data:
+            user.is_active = data['is_active']
+        
+        db.commit()
+        print(f"DEBUG: After commit, user department: {user.department}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Cập nhật user thành công: {user.username}',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'role': user.role,
+                'department': user.department,
+                'is_active': user.is_active
             }
         })
         

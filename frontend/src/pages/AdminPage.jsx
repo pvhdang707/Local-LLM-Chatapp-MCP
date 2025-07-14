@@ -101,6 +101,7 @@ const AdminPage = () => {
     try {
       const response = await adminApi.getAllUsers(page, usersPagination.perPage);
       const usersList = response.users || [];
+      console.log('DEBUG: Loaded users:', usersList);
       setUsers(usersList);
       setFilteredUsers(usersList);
       setUsersPagination({
@@ -267,9 +268,36 @@ const AdminPage = () => {
             setShowEditModal(false);
             setEditingUser(null);
           }}
-          onSave={(userId, userData) => {
-            // This will be handled by UserManagementTab
-            console.log('Update user:', userId, userData);
+          onSave={async (userId, userData) => {
+            console.log('DEBUG: Frontend sending data:', { userId, userData });
+            setLoading(true);
+            try {
+              // Tạo object chỉ chứa các thông tin cần cập nhật (loại bỏ department)
+              const { department, ...otherData } = userData;
+              
+              // Cập nhật các thông tin khác trước
+              if (Object.keys(otherData).length > 0) {
+                const result = await adminApi.updateUser(userId, otherData);
+                console.log('DEBUG: Backend response for other data:', result);
+              }
+              
+              // Cập nhật department riêng biệt
+              if (department !== editingUser?.department) {
+                console.log('DEBUG: Updating department specifically');
+                const deptResult = await adminApi.updateUserDepartment(userId, department);
+                console.log('DEBUG: Department update response:', deptResult);
+              }
+              
+              setShowEditModal(false);
+              setEditingUser(null);
+              loadUsers(usersPagination.page);
+              setNotification({ message: 'Cập nhật user thành công!', type: 'success' });
+            } catch (err) {
+              console.error('Lỗi khi cập nhật user:', err);
+              setNotification({ message: 'Cập nhật không thành công, vui lòng thử lại.', type: 'error' });
+            } finally {
+              setLoading(false);
+            }
           }}
         />
 
